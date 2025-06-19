@@ -1,0 +1,93 @@
+package cmd
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+
+	"opforjellyfin/internal"
+
+	"github.com/spf13/cobra"
+)
+
+var (
+	//follow   bool
+	quality  string
+	debug    bool
+	forceKey string
+)
+
+var downloadCmd = &cobra.Command{
+	Use:   "download <downloadKey> [downloadKey...]",
+	Short: "Download one or more One Pace torrents",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			log.Fatalf("You must specify at least one downloadKey")
+		}
+
+		cfg := internal.LoadConfig()
+		if cfg.TargetDir == "" {
+			log.Fatalf("⚠️  No target directory set. Use 'setDir <path>' first.")
+		}
+
+		torrentList, err := internal.FetchOnePaceTorrents()
+		if err != nil {
+			log.Fatalf("❌ Failed to fetch torrents: %v", err)
+		}
+
+		var matches []internal.TorrentEntry
+		for _, arg := range args {
+			num, err := strconv.Atoi(arg)
+			if err != nil {
+				log.Fatalf("Invalid downloadKey: %s", arg)
+			}
+
+			var match *internal.TorrentEntry
+			for _, t := range torrentList {
+				if t.DownloadKey == num && (quality == "" || t.Quality == quality) {
+					tmp := t
+					match = &tmp
+					break
+				}
+			}
+
+			if match == nil {
+				log.Printf("⚠️  No torrent found for key %d and quality '%s'", num, quality)
+				continue
+			}
+
+			if forceKey != "" {
+				if len(args) > 1 {
+					log.Fatalf("❌ --forcekey may only be used with a single DownloadKey")
+				}
+				match.ChapterRange = forceKey
+			}
+
+			log.Printf("🔍 Matched DownloadKey %d → %s (%s) [%s]",
+				match.DownloadKey, match.SeasonName, match.Quality, match.ChapterRange)
+			fmt.Printf("🎬 Starting download: %s (%s)\n", match.SeasonName, match.Quality)
+			matches = append(matches, *match)
+		}
+
+		if len(matches) == 0 {
+			fmt.Println("⚠️  No downloads to process.")
+			os.Exit(0)
+		}
+
+		internal.StartMultipleDownloads(context.Background(), matches, cfg.TargetDir)
+
+		fmt.Println("🚀 Downloads started.")
+		fmt.Println("👀 Use `opfor progress` to track progress, or `opfor status` for a summary.")
+	},
+}
+
+func init() {
+	//downloadCmd.Flags().BoolVarP(&follow, "follow", "f", false, "Follow download progress live")
+	downloadCmd.Flags().StringVarP(&quality, "quality", "Q", "", "Only download with specific quality (e.g. 1080p)")
+	downloadCmd.Flags().BoolVar(&debug, "debug", false, "Tail debug.log live during download (not implemented)")
+	downloadCmd.Flags().StringVar(&forceKey, "forcekey", "", "Override chapter range (only for single downloadKey)")
+
+	rootCmd.AddCommand(downloadCmd)
+}
