@@ -2,12 +2,11 @@ module opforjellyfin
 
 go 1.23.0
 
-toolchain go1.24.4
-
 require (
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/anacrolix/torrent v1.58.1
 	github.com/charmbracelet/fang v0.1.0
+	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/spf13/cobra v1.9.1
 	github.com/vbauerster/mpb/v8 v8.10.2
 )
@@ -34,6 +33,7 @@ require (
 	github.com/anacrolix/upnp v0.1.4 // indirect
 	github.com/anacrolix/utp v0.1.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/immutable v0.3.0 // indirect
 	github.com/bits-and-blooms/bitset v1.2.2 // indirect
@@ -59,7 +59,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
@@ -69,6 +69,7 @@ require (
 	github.com/muesli/mango-cobra v1.2.0 // indirect
 	github.com/muesli/mango-pflag v0.1.0 // indirect
 	github.com/muesli/roff v0.1.0 // indirect
+	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
 	github.com/pion/datachannel v1.5.9 // indirect

@@ -8,7 +8,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+)
+
+var (
+	styleKey   = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
+	styleHave  = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+	styleNope  = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	styleTitle = lipgloss.NewStyle().Bold(true)
+	styleDim   = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 
 var (
@@ -46,18 +55,25 @@ var listCmd = &cobra.Command{
 		fmt.Println("📚 Filtered Download List:\n")
 		for _, t := range filtered {
 
-			check := "❌"
-
-			if t.MetaDataAvail {
-				check = "✅"
-			}
-
-			have := "❌"
+			key := styleKey.Render(fmt.Sprintf("D: %4d", t.DownloadKey))
+			haveMark := styleNope.Render("❌")
+			metaMark := styleNope.Render("❌")
 
 			if t.HaveIt {
-				have = "✅"
+				haveMark = styleHave.Render("✅")
 			}
-			fmt.Printf("D: %4d: %-30s Have? %s | Meta: %s | %-9s | %-5s | %d seeders\n", t.DownloadKey, truncate(t.SeasonName, 28), have, check, t.ChapterRange, t.Quality, t.Seeders)
+			if t.MetaDataAvail {
+				metaMark = styleHave.Render("✅")
+			}
+
+			fmt.Printf("%s: %-30s Have? %s | Meta: %s | %-9s | %-5s | %d seeders\n",
+				key,
+				truncate(t.SeasonName, 28),
+				haveMark,
+				metaMark,
+				t.ChapterRange,
+				t.Quality,
+				t.Seeders)
 		}
 	},
 }
