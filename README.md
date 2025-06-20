@@ -24,7 +24,8 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 ![Download view example](img/example2.png)  
 
-Finished download shows file placement:
+> Finished download shows file placement:
+
 ![Finished download](img/example3.png)  
 
 ## 🚀 Installation
