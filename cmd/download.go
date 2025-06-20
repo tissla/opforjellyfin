@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"opforjellyfin/internal"
 
@@ -34,6 +35,7 @@ var downloadCmd = &cobra.Command{
 
 		torrentList, err := internal.FetchOnePaceTorrents()
 		if err != nil {
+			internal.DebugLog(false, "❌ Failed to fetch torrents: %v", err)
 			log.Fatalf("❌ Failed to fetch torrents: %v", err)
 		}
 
@@ -54,7 +56,7 @@ var downloadCmd = &cobra.Command{
 			}
 
 			if match == nil {
-				log.Printf("⚠️  No torrent found for key %d and quality '%s'", num, quality)
+				internal.DebugLog(true, "⚠️  No torrent found for key %d and quality '%s'", num, quality)
 				continue
 			}
 
@@ -65,9 +67,8 @@ var downloadCmd = &cobra.Command{
 				match.ChapterRange = forceKey
 			}
 
-			log.Printf("🔍 Matched DownloadKey %d → %s (%s) [%s]",
-				match.DownloadKey, match.SeasonName, match.Quality, match.ChapterRange)
-			fmt.Printf("🎬 Starting download: %s (%s)\n", match.SeasonName, match.Quality)
+			internal.DebugLog(true, "🔍 Matched DownloadKey %d → %s (%s) [%s]", match.DownloadKey, match.SeasonName, match.Quality, match.ChapterRange)
+			internal.DebugLog(true, "🎬 Starting download: %s (%s)\n", match.SeasonName, match.Quality)
 			matches = append(matches, *match)
 		}
 
@@ -76,10 +77,16 @@ var downloadCmd = &cobra.Command{
 			os.Exit(0)
 		}
 
-		internal.StartMultipleDownloads(context.Background(), matches, cfg.TargetDir)
+		// clears current downloads from active.json so as not to confuse followprogress.
+		internal.ClearActiveDownloads()
 
-		fmt.Println("🚀 Downloads started.")
-		fmt.Println("👀 Use `opfor progress` to track progress, or `opfor status` for a summary.")
+		// needs to start as a go-routine, but with context.Background()?
+		go internal.StartMultipleDownloads(context.Background(), matches, cfg.TargetDir)
+
+		fmt.Println("🚀 Downloads started!")
+		time.Sleep(1 * time.Second)
+		internal.FollowProgress()
+
 	},
 }
 

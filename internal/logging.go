@@ -1,4 +1,3 @@
-// internal/logging.go
 package internal
 
 import (
@@ -8,27 +7,33 @@ import (
 	"strings"
 )
 
-var debugEnabled bool
+var debugEnabled bool = false
+var debugFile *os.File
 
+func EnableDebugLogging() {
+	debugEnabled = true
 
-// InitDebugLogging initializes logging to debug.log
-func InitDebugLogging(enabled bool) {
-	debugEnabled = enabled
-
-	if !debugEnabled {
-		return
-	}
-
-	f, err := os.OpenFile("debug.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	f, err := os.OpenFile("debug.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
-		log.Printf("❌ Could not open debug.log: %v", err)
+		fmt.Fprintf(os.Stderr, "❌ Could not open debug.log: %v\n", err)
 		return
 	}
 
+	debugFile = f
 	log.SetOutput(f)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
+func DebugLog(showUser bool, format string, args ...any) {
+	if showUser {
+		fmt.Printf(format+"\n", args...)
+	}
+
+	if debugEnabled && debugFile != nil {
+		log.SetOutput(debugFile)
+		log.Printf(format, args...)
+	}
+}
 
 func ShowLogEntries(n int) {
 	if !debugEnabled {
@@ -37,7 +42,7 @@ func ShowLogEntries(n int) {
 
 	data, err := os.ReadFile("debug.log")
 	if err != nil {
-		log.Printf("❌ Could not open debug.log: %v", err)
+		fmt.Fprintf(os.Stderr, "❌ Could not open debug.log: %v\n", err)
 		return
 	}
 
@@ -52,6 +57,3 @@ func ShowLogEntries(n int) {
 		}
 	}
 }
-
-
-

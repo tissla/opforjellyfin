@@ -37,6 +37,15 @@ func CreateProgressBar(p *mpb.Progress, td *TorrentDownload) *mpb.Bar {
 }
 
 func FollowProgress() {
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if len(loadActiveDownloadsFromFile()) > 0 {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
 	downloads := loadActiveDownloadsFromFile()
 	if len(downloads) == 0 {
 		fmt.Println("📭 No active downloads.")
@@ -44,12 +53,13 @@ func FollowProgress() {
 	}
 
 	lastMessages := make(map[int]string)
-	p := mpb.New(mpb.WithWidth(40))
-	bars := make(map[int]*mpb.Bar)
 	messages := make(map[int]*string)
+	bars := make(map[int]*mpb.Bar)
+
+	p := mpb.New(mpb.WithWidth(40))
 
 	for _, td := range downloads {
-		msg := td.Message
+		messages[td.TorrentID] = &td.Message
 		bar := p.New(
 			td.TotalSize,
 			mpb.BarStyle().Lbound("[").Filler("▓").Tip("█").Padding("░").Rbound("]"),
@@ -57,13 +67,13 @@ func FollowProgress() {
 				decor.Name(truncate(td.Title, 15)),
 			),
 			mpb.AppendDecorators(
-				decor.Any(func(_ decor.Statistics) string {
-					return msg
-				}),
+				decor.OnComplete(
+					decor.Percentage(decor.WCSyncSpace),
+					"✔️ Done",
+				),
 			),
 		)
 		bars[td.TorrentID] = bar
-		messages[td.TorrentID] = &msg
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -83,36 +93,42 @@ func FollowProgress() {
 		case <-ticker.C:
 			downloads = loadActiveDownloadsFromFile()
 			for _, td := range downloads {
-				if bar, exists := bars[td.TorrentID]; exists {
+				bar, ok := bars[td.TorrentID]
+				if !ok {
+					continue
+				}
+
+				if td.Done {
+
+					if !bar.Completed() {
+						bar.SetTotal(td.TotalSize, true)
+					}
+
+				} else {
+
 					bar.SetCurrent(td.Progress)
-					bar.SetTotal(td.TotalSize, td.Done)
-					if msgPtr, ok := messages[td.TorrentID]; ok {
-						if td.Message != lastMessages[td.TorrentID] {
-							*msgPtr = td.Message
-							lastMessages[td.TorrentID] = td.Message
-						}
+					bar.SetTotal(td.TotalSize, false)
+					if msgPtr, ok := messages[td.TorrentID]; ok && td.Message != lastMessages[td.TorrentID] {
+						*msgPtr = td.Message
+						lastMessages[td.TorrentID] = td.Message
 					}
 				}
 			}
+
 		case <-signalChan:
 			fmt.Println("\n🛑 Cancelled by user.")
-			return
-		case <-done:
-			fmt.Println("\n✅ All downloads finished.")
-			return
-		}
-	}
-}
 
-func WaitForActiveDownloads(timeout time.Duration) bool {
-	start := time.Now()
-	for time.Since(start) < timeout {
-		if len(GetActiveDownloads()) > 0 {
-			return true
+			ClearActiveDownloads()
+			return
+
+		case <-done:
+
+			fmt.Println("\n✅ All downloads finished.")
+
+			ClearActiveDownloads()
+			return
 		}
-		time.Sleep(250 * time.Millisecond)
 	}
-	return false
 }
 
 func truncate(s string, n int) string {

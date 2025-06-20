@@ -8,16 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/spf13/cobra"
-)
-
-var (
-	styleKey   = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
-	styleHave  = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
-	styleNope  = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	styleTitle = lipgloss.NewStyle().Bold(true)
-	styleDim   = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 
 var (
@@ -52,28 +44,43 @@ var listCmd = &cobra.Command{
 			return filtered[i].DownloadKey < filtered[j].DownloadKey
 		})
 
+		alternate := false
+
 		fmt.Println("📚 Filtered Download List:\n")
 		for _, t := range filtered {
 
-			key := styleKey.Render(fmt.Sprintf("D: %4d", t.DownloadKey))
-			haveMark := styleNope.Render("❌")
-			metaMark := styleNope.Render("❌")
+			// specific styling
+			dK := internal.StyleFactory("DKEY", internal.Style.LBlue)
+			dKey := internal.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), internal.Style.Pink)
+			styledTitle := internal.StyleFactory(t.SeasonName, internal.Style.LBlue)
+			title := ansi.Truncate(styledTitle, 20, "…")
+
+			seeders := internal.StyleByRange(t.Seeders, 0, 10)
+
+			// bools
+			haveMark := "❌"
+			metaMark := "❌"
 
 			if t.HaveIt {
-				haveMark = styleHave.Render("✅")
+				haveMark = "✅"
 			}
 			if t.MetaDataAvail {
-				metaMark = styleHave.Render("✅")
+				metaMark = "✅"
 			}
 
-			fmt.Printf("%s: %-30s Have? %s | Meta: %s | %-9s | %-5s | %d seeders\n",
-				key,
-				truncate(t.SeasonName, 28),
+			row := fmt.Sprintf("%s - %s: %-30s Have? %s | Meta: %s | %-9s | %-5s | %-3s seeders",
+				dK,
+				dKey,
+				title,
 				haveMark,
 				metaMark,
 				t.ChapterRange,
 				t.Quality,
-				t.Seeders)
+				seeders)
+
+			fmt.Print(internal.RenderRow(row, alternate))
+
+			alternate = !alternate
 		}
 	},
 }

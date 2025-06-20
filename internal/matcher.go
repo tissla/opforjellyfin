@@ -11,39 +11,38 @@ import (
 	"strings"
 )
 
-func MatchAndPlaceVideo(videoPath, metadataDir string, td *TorrentDownload) error {
+func MatchAndPlaceVideo(videoPath, metadataDir string, td *TorrentDownload) (string, error) {
+
+	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
+		return "", nil
+	}
+
 	fileName := filepath.Base(videoPath)
 
 	chapterKey, err := extractChapterKey(td.ChapterRange)
 	if err != nil {
-		return progressErrorf(td, "⚠️ Could not extract manga chapter: %w", err)
+		return "", fmt.Errorf("⚠️ Could not extract manga chapter: %w", err)
 	}
 
 	index, err := loadMetadataIndex(metadataDir)
 	if err != nil {
-		return progressErrorf(td, "❌ Could not load metadata index: %w", err)
+		return "", fmt.Errorf("❌ Could not load metadata index: %w", err)
 	}
 
 	match, err := findMetadataMatch(chapterKey, index)
 	if err != nil {
-		return progressErrorf(td, "❌ %v", err)
+		return "", fmt.Errorf("❌ %v", err)
 	}
 
 	finalPath, err := prepareDestination(metadataDir, videoPath, match, chapterKey)
 	if err != nil {
-		return progressErrorf(td, "❌ Could not place video file: %w", err)
+		return "", fmt.Errorf("❌ Could not place video file: %w", err)
 	}
 
 	relPath, _ := filepath.Rel(metadataDir, finalPath)
-	progressLog(fmt.Sprintf("🎞️  Placed: %s → %s", fileName, relPath), td)
+	msg := fmt.Sprintf("🎞️  Placed: %s → %s", fileName, relPath)
 
-	return nil
-}
-
-func progressErrorf(td *TorrentDownload, format string, args ...interface{}) error {
-	err := fmt.Errorf(format, args...)
-	progressLog(err.Error(), td)
-	return err
+	return msg, nil
 }
 
 func extractChapterKey(chapterRange string) (string, error) {
