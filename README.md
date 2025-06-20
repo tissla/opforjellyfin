@@ -12,11 +12,11 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 ## 📸 Example
 
-![example1](example1.png)  
+![example1](img/example1.png)  
 
-![example2](example2.png)  
+![example2](img/example2.png)  
 
-![example2](example3.png)  
+![example2](img/example3.png)  
 
 ## 🚀 Installation
 
