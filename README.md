@@ -86,3 +86,14 @@ All pull requests are welcome. All criticisms are welcome. I'm here to build and
 - SpykerNZ for his metadata
 - Anacrolix awesome torrent lib
 - Charm team for cool stuff that I should use more
+
+## ⚠️ Disclaimer
+
+This tool is provided **as-is** with no guarantees or warranties.  
+Use it at your own risk.
+
+While care has been taken to avoid destructive behavior, this tool manipulates files and downloads torrents – always review the source code and test cautiously.  
+The author is not responsible for any damage to your system, loss of data, or violation of terms of service related to the use of this software.
+
+Also note:  
+This project is not affiliated with One Pace, Jellyfin, or any content providers. Please respect local laws and copyright regulations.
