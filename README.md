@@ -10,13 +10,20 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 ---
 
-## 📸 Example
+## 📸 Examples
 
-![example1](img/example1.png)  
+    ```bash
+    ./opfor list -t wano
+    ```
+![List view example](img/example1.png)  
 
-![example2](img/example2.png)  
+    ```bash
+    ./opfor download 1 3
+    ```
+![Download view example](img/example2.png)  
 
-![example2](img/example3.png)  
+Finished download shows file placement:
+![Finished download](img/example3.png)  
 
 ## 🚀 Installation
 

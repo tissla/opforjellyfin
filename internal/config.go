@@ -9,12 +9,10 @@ import (
 	"path/filepath"
 )
 
-
-
 type Config struct {
-    TargetDir       string `json:"target_dir"`
-    GitHubRepo   string `json:"github_base_url"`
-    TorrentAPIURL   string `json:"torrent_api_url"`
+	TargetDir     string `json:"target_dir"`
+	GitHubRepo    string `json:"github_base_url"`
+	TorrentAPIURL string `json:"torrent_api_url"`
 }
 
 func LoadConfig() Config {
@@ -22,9 +20,9 @@ func LoadConfig() Config {
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		defaultCfg := Config{
-			TargetDir:      "",
-			GitHubRepo:     "tissla/one-pace-jellyfin",
-			TorrentAPIURL:  "https://nyaa.si",
+			TargetDir:     "",
+			GitHubRepo:    "tissla/one-pace-jellyfin",
+			TorrentAPIURL: "https://nyaa.si",
 		}
 		SaveConfig(defaultCfg)
 		fmt.Printf("📁 Created default config at: %s\n", path)
@@ -44,8 +42,6 @@ func LoadConfig() Config {
 	return cfg
 }
 
-
-
 func SaveConfig(cfg Config) {
 	path := getConfigPath()
 
@@ -59,8 +55,6 @@ func SaveConfig(cfg Config) {
 	}
 }
 
-
-
 func SetDir(dir string, force bool) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
@@ -73,27 +67,25 @@ func SetDir(dir string, force bool) {
 
 	fmt.Println("✅ Default target directory set to:", abs)
 
-    if (force) {
-        FetchAllMetadata(abs, cfg)
-    } else {
-	    SyncMetadata(abs, cfg)
-    }
+	if force {
+		FetchAllMetadata(abs, cfg)
+	} else {
+		SyncMetadata(abs, cfg)
+	}
 }
-
 
 func EnsureConfigExists() {
 	path := getConfigPath()
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		defaultCfg := Config{
-			TargetDir:      "",
-			GitHubRepo:  "tissla/one-pace-jellyfin",
-			TorrentAPIURL:  "https://nyaa.si",
+			TargetDir:     "",
+			GitHubRepo:    "tissla/one-pace-jellyfin",
+			TorrentAPIURL: "https://nyaa.si",
 		}
 		SaveConfig(defaultCfg)
 		fmt.Printf("📁 Created default config at: %s\n", path)
 	}
 }
-
 
 func getConfigPath() string {
 	dirname, err := os.UserConfigDir()
