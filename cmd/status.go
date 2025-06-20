@@ -19,7 +19,7 @@ var statusCmd = &cobra.Command{
 		}
 		fmt.Println("📦 Active Downloads:")
 		for _, d := range downloads {
-			fmt.Printf("- %s: %.2f%% %s\n", d.Title, (float64(d.Progress)/float64(d.TotalSize))*100, d.Message)
+			fmt.Printf("- %s: %.2f%%\n", d.Title, (float64(d.Progress)/float64(d.TotalSize))*100)
 		}
 	},
 }

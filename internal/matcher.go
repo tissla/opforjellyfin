@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func MatchAndPlaceVideo(videoPath, metadataDir string, td *TorrentDownload) (string, error) {
@@ -19,7 +21,7 @@ func MatchAndPlaceVideo(videoPath, metadataDir string, td *TorrentDownload) (str
 
 	fileName := filepath.Base(videoPath)
 
-	chapterKey, err := extractChapterKey(td.ChapterRange)
+	chapterKey, err := extractChapterKey(fileName)
 	if err != nil {
 		return "", fmt.Errorf("⚠️ Could not extract manga chapter: %w", err)
 	}
@@ -40,7 +42,15 @@ func MatchAndPlaceVideo(videoPath, metadataDir string, td *TorrentDownload) (str
 	}
 
 	relPath, _ := filepath.Rel(metadataDir, finalPath)
-	msg := fmt.Sprintf("🎞️  Placed: %s → %s", fileName, relPath)
+
+	//debug
+
+	DebugLog(false, fmt.Sprintf("🎞️  Placed: %s → %s", fileName, relPath))
+
+	// truncate for outmessage
+	outFileName := ansi.Truncate(fileName, 36, "..")
+	outRelPath := ansi.Truncate(relPath, 36, "..")
+	msg := fmt.Sprintf("🎞️  Placed: %s → %s", outFileName, outRelPath)
 
 	return msg, nil
 }

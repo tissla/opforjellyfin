@@ -67,7 +67,10 @@ var downloadCmd = &cobra.Command{
 				match.ChapterRange = forceKey
 			}
 
-			internal.DebugLog(true, "🔍 Matched DownloadKey %d → %s (%s) [%s]", match.DownloadKey, match.SeasonName, match.Quality, match.ChapterRange)
+			dKey := internal.StyleFactory(fmt.Sprintf("%4d", match.DownloadKey), internal.Style.Pink)
+			title := internal.StyleFactory(match.SeasonName, internal.Style.LBlue)
+
+			internal.DebugLog(true, "🔍 Matched DownloadKey %s → %s (%s) [%s]", dKey, title, match.Quality, match.ChapterRange)
 			internal.DebugLog(true, "🎬 Starting download: %s (%s)\n", match.SeasonName, match.Quality)
 			matches = append(matches, *match)
 		}

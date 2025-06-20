@@ -23,7 +23,7 @@ type TorrentDownload struct {
 	OutDir       string
 	Progress     int64
 	TotalSize    int64
-	Message      string
+	Messages     []string
 	Done         bool
 	Error        string
 	ChapterRange string
@@ -35,10 +35,9 @@ var (
 	activeMu   sync.Mutex
 )
 
-// used for writing to json-file for live tracking of concurrent background downloads. currently unused
+// used for writing to json-file for live tracking of concurrent background downloads. currently just saves progress
 func progressLog(msg string, td *TorrentDownload) {
 
-	td.Message = msg
 	DebugLog(false, msg, td.TorrentID)
 	saveTorrentDownload(td)
 }
@@ -61,13 +60,16 @@ func StartMultipleDownloads(ctx context.Context, entries []TorrentEntry, outDir 
 // main torrent download and tracker
 func StartTorrent(ctx context.Context, entry TorrentEntry, outDir string) error {
 	// init download obj
+
+	dKey := StyleFactory(fmt.Sprintf("%4d", entry.DownloadKey), Style.Pink)
+	title := StyleFactory(entry.SeasonName, Style.LBlue)
+
 	td := &TorrentDownload{
-		Title:        fmt.Sprintf("S%02d: %s (%s)", entry.DownloadKey, entry.SeasonName, entry.Quality),
+		Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
 		TorrentID:    entry.TorrentID,
 		Started:      time.Now(),
 		OutDir:       outDir,
 		ChapterRange: entry.ChapterRange,
-		Message:      "🌱 Initializing...",
 	}
 	saveTorrentDownload(td)
 
@@ -133,7 +135,6 @@ func StartTorrent(ctx context.Context, entry TorrentEntry, outDir string) error 
 			return cleanupWithError(td, ctx.Err())
 		case <-time.After(1 * time.Second):
 			td.Progress = t.BytesCompleted()
-			td.Message = fmt.Sprintf("📥 Downloading... %.2f%%", 100*float64(td.Progress)/float64(td.TotalSize))
 			saveTorrentDownload(td)
 		}
 	}
@@ -146,7 +147,7 @@ func StartTorrent(ctx context.Context, entry TorrentEntry, outDir string) error 
 		if err != nil {
 			td.Error += fmt.Sprintf("❌ Error placing file %s: %v\n", f.Path(), err)
 		} else if msg != "" {
-			progressLog(msg, td)
+			td.Messages = append(td.Messages, msg)
 		}
 	}
 
@@ -159,7 +160,9 @@ func StartTorrent(ctx context.Context, entry TorrentEntry, outDir string) error 
 func cleanupWithError(td *TorrentDownload, err error) error {
 	td.Error = err.Error()
 	progressLog(td.Error, td)
-	DeleteTorrentDownload(td)
+
+	// we clear all downloads when this happens
+	ClearActiveDownloads()
 	return err
 }
 
@@ -182,26 +185,6 @@ func saveTorrentDownload(td *TorrentDownload) {
 	}
 	data, _ := json.MarshalIndent(list, "", "  ")
 	os.WriteFile(activeFile, data, 0644)
-}
-
-// deletes torrent from active.json
-func DeleteTorrentDownload(td *TorrentDownload) {
-	activeMu.Lock()
-	defer activeMu.Unlock()
-
-	list := loadActiveDownloadsFromFile()
-	updated := []*TorrentDownload{}
-	for _, d := range list {
-		if d.TorrentID != td.TorrentID {
-			updated = append(updated, d)
-		}
-	}
-	data, _ := json.MarshalIndent(updated, "", "  ")
-	os.WriteFile(activeFile, data, 0644)
-	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
-
-	os.RemoveAll(tmpDir)
-
 }
 
 // returns list of torrents in active.json
