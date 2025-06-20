@@ -66,28 +66,50 @@ func StyleByRange(value, min, max int) string {
 }
 
 // zebra lines
-func RenderRow(line string, isAlt bool) string {
+func RenderRow(format string, isAlt bool, args ...interface{}) string {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil || width <= 0 {
 		width = 80
 	}
 
-	visible := ansi.Strip(line)
+	row := fmt.Sprintf(format, args...)
+
+	// chatgpt hax solution
+	bg := ""
+	reset := "\x1b[0m"
+	if isAlt {
+		bg = "\x1b[48;5;234m"
+	}
+
+	var withBg strings.Builder
+	inAnsi := false
+	for i := 0; i < len(row); i++ {
+		ch := row[i]
+		withBg.WriteByte(ch)
+
+		if ch == '\x1b' {
+			inAnsi = true
+		} else if inAnsi && ch == 'm' {
+			inAnsi = false
+			if bg != "" {
+				withBg.WriteString(bg)
+			}
+		}
+	}
+
+	final := bg + withBg.String()
+
+	visible := ansi.Strip(final)
 	visibleWidth := runewidth.StringWidth(visible)
 
-	padding := width - visibleWidth
-	if padding < 0 {
-		padding = 0
-	}
-	padded := line + strings.Repeat(" ", padding)
-
-	style := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")).
-		Width(width)
-
-	if isAlt {
-		style = style.Background(lipgloss.Color("236"))
+	if visibleWidth < width {
+		final += strings.Repeat(" ", width-visibleWidth)
 	}
 
-	return style.Render(padded)
+	final += reset
+
+	// debug
+	DebugLog(false, "[RenderRow] RAW: %q\n[RenderRow] VISIBLE: %q\n[RenderRow] RENDERED: %q\n", row, visible, final)
+
+	return final
 }

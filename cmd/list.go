@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/x/ansi"
 	"github.com/spf13/cobra"
 )
 
@@ -49,14 +48,6 @@ var listCmd = &cobra.Command{
 		fmt.Println("📚 Filtered Download List:\n")
 		for _, t := range filtered {
 
-			// specific styling
-			dK := internal.StyleFactory("DKEY", internal.Style.LBlue)
-			dKey := internal.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), internal.Style.Pink)
-			styledTitle := internal.StyleFactory(t.SeasonName, internal.Style.LBlue)
-			title := ansi.Truncate(styledTitle, 20, "…")
-
-			seeders := internal.StyleByRange(t.Seeders, 0, 10)
-
 			// bools
 			haveMark := "❌"
 			metaMark := "❌"
@@ -68,17 +59,22 @@ var listCmd = &cobra.Command{
 				metaMark = "✅"
 			}
 
-			row := fmt.Sprintf("%s - %s: %-30s Have? %s | Meta: %s | %-9s | %-5s | %-3s seeders",
-				dK,
-				dKey,
-				title,
+			truncatedTitle := truncate(t.SeasonName, 20)
+
+			row := internal.RenderRow(
+				"%s - %s: %-30s Have? %s | Meta: %s | %-9s | %-5s | %-3s seeders",
+				alternate,
+				internal.StyleFactory("DKEY", internal.Style.LBlue),
+				internal.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), internal.Style.Pink),
+				internal.StyleFactory(truncatedTitle, internal.Style.LBlue),
 				haveMark,
 				metaMark,
 				t.ChapterRange,
 				t.Quality,
-				seeders)
+				internal.StyleByRange(t.Seeders, 0, 10),
+			)
 
-			fmt.Print(internal.RenderRow(row, alternate))
+			fmt.Println(row)
 
 			alternate = !alternate
 		}
