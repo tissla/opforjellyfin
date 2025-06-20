@@ -2,7 +2,7 @@
 
 # 🏴‍☠️ OpforJellyfin
 
-Ett CLI-verktyg för att automatiskt hämta och organisera [One Pace](https://onepace.net) till **Jellyfin** – komplett med metadata, matchade filnamn och struktur.
+CLI-tool to automate download and organisation of [One Pace](https://onepace.net) episodes for **Jellyfin**!
 
 > ✨ Torrent downloads
 > ✨ Placement after Jellyfin standards
@@ -21,10 +21,10 @@ Ett CLI-verktyg för att automatiskt hämta och organisera [One Pace](https://on
 2. Clone repo:
    ```bash
    git clone https://github.com/tissla/opforjellyfin.git
-   cd opforjellyfin```
+   cd opforjellyfin
 3. Build binary:
    ```bash
-   go build -o opfor```
+   go build -o opfor
 
 
 ## 🔧 Usage (READ FIRST!)
