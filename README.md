@@ -15,11 +15,13 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
     ```bash
     ./opfor list -t wano
     ```
+
 ![List view example](img/example1.png)  
 
     ```bash
     ./opfor download 1 3
     ```
+
 ![Download view example](img/example2.png)  
 
 Finished download shows file placement:
