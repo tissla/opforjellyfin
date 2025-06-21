@@ -16,7 +16,7 @@ func EnableDebugLogging() {
 
 	f, err := os.OpenFile("debug.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Could not open debug.log: %v\n", err)
+		fmt.Fprintf(os.Stderr, "logger: could not open debug.log: %v\n", err)
 		return
 	}
 
@@ -43,7 +43,7 @@ func ShowLogEntries(n int) {
 
 	data, err := os.ReadFile("debug.log")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Could not open debug.log: %v\n", err)
+		fmt.Fprintf(os.Stderr, "logger: could not open debug.log: %v\n", err)
 		return
 	}
 

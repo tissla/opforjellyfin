@@ -22,12 +22,12 @@ func LoadConfig() Config {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatalf("❌ Could not read config: %v", err)
+		log.Fatalf("config: could not read config: %v", err)
 	}
 
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		log.Fatalf("❌ Invalid config format: %v", err)
+		log.Fatalf("config: invalid config format: %v", err)
 	}
 
 	return cfg
@@ -39,11 +39,11 @@ func SaveConfig(cfg Config) {
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		log.Fatalf("❌ Failed to serialize config: %v", err)
+		log.Fatalf("config: failed to serialize config: %v", err)
 	}
 
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		log.Fatalf("❌ Failed to save config: %v", err)
+		log.Fatalf("config: failed to save config: %v", err)
 	}
 }
 
@@ -63,12 +63,12 @@ func EnsureConfigExists() string {
 func getConfigPath() string {
 	dirname, err := os.UserConfigDir()
 	if err != nil {
-		log.Fatalf("❌ Could not determine config directory: %v", err)
+		log.Fatalf("could not determine config directory: %v", err)
 	}
 	path := filepath.Join(dirname, "opforjellyfin")
 	err = os.MkdirAll(path, 0755)
 	if err != nil {
-		log.Fatalf("❌ Could not create config dir: %v", err)
+		log.Fatalf("could not create config dir: %v", err)
 	}
 	return filepath.Join(path, "config.json")
 }

@@ -27,13 +27,13 @@ func MatchAndPlaceVideo(videoPath, metadataDir string) (string, error) {
 	chapterKey, err := shared.ExtractChapterKeyFromTitle(fileName)
 
 	if err != nil {
-		return "", fmt.Errorf("⚠️ Could not extract manga chapter: %w", err)
+		return "", fmt.Errorf("matcher: could not extract manga chapter: %w", err)
 	}
 	logger.DebugLog(false, "chapterkey extracted: %s from %s", chapterKey, fileName)
 
 	index, err := loadMetadataIndex(metadataDir)
 	if err != nil {
-		return "", fmt.Errorf("❌ Could not load metadata index: %w", err)
+		return "", fmt.Errorf("matcher: could not load metadata index: %w", err)
 	}
 
 	dstPathNoSuffix := findMetadataMatch(chapterKey, index)
@@ -51,7 +51,7 @@ func MatchAndPlaceVideo(videoPath, metadataDir string) (string, error) {
 	//relative path for logs
 	relPath, _ := filepath.Rel(metadataDir, finalPath)
 	//debug
-	logger.DebugLog(false, fmt.Sprintf("🎞️  Placed: %s → %s", fileName, relPath))
+	logger.DebugLog(false, fmt.Sprintf("placed: %s → %s", fileName, relPath))
 
 	// truncate for outmessage
 	outFileName := ansi.Truncate(fileName, 36, "..")

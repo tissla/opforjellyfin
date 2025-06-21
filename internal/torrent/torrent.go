@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"sync"
 	"time"
 
 	"github.com/anacrolix/torrent"
@@ -25,21 +24,6 @@ func progressLog(msg string, td *shared.TorrentDownload) {
 
 	logger.DebugLog(false, msg, td.TorrentID)
 	shared.SaveTorrentDownload(td)
-}
-
-// sync waitgroup lets every download start at its own pace.
-func StartMultipleDownloads(ctx context.Context, entries []shared.TorrentEntry, outDir string) {
-	var wg sync.WaitGroup
-	for _, entry := range entries {
-		wg.Add(1)
-		go func(e shared.TorrentEntry) {
-			defer wg.Done()
-			if err := StartTorrent(ctx, e, outDir); err != nil {
-				logger.DebugLog(true, "❌ Error downloading %s: %v", e.Title, err)
-			}
-		}(entry)
-	}
-	wg.Wait()
 }
 
 // main torrent download and tracker
@@ -58,18 +42,20 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 	}
 	shared.SaveTorrentDownload(td)
 
-	// 2) get torrent meta-info
+	// get torrent meta-info
 	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().TorrentAPIURL, entry.TorrentID)
 	progressLog(fmt.Sprintf("🌍 Fetching torrent: %s", torrentURL), td)
 
+	// get metadata
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, torrentURL, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		progressLog("❌ HTTP request failed", td)
+		progressLog("HTTP request for metadata failed", td)
 		return cleanupWithError(td, err)
 	}
 	defer resp.Body.Close()
 
+	//build meta
 	meta, err := metainfo.Load(resp.Body)
 	if err != nil {
 		return cleanupWithError(td, err)
@@ -91,8 +77,8 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 	if err != nil {
 		return cleanupWithError(td, err)
 	}
-	defer CloseWithLogs(client)
 
+	// add torrent
 	t, err := client.AddTorrent(meta)
 	if err != nil {
 		return cleanupWithError(td, err)
@@ -128,15 +114,21 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 	logger.DebugLog(false, "Torrent contains %d files", len(t.Files()))
 	td.Done = true
 
+	CloseWithLogs(client)
+
 	progressLog("✅ Download complete, placing files...", td)
+
+	logger.DebugLog(false, "Waiting for OS to release files..")
+	time.Sleep(2 * time.Second)
 
 	matcher.ProcessTorrentFiles(tmpDir, outDir, td)
 
 	return nil
 }
 
+// loghelper
 func CloseWithLogs(client *torrent.Client) {
-	logger.DebugLog(false, "Torrentclient closed for:", client)
+	logger.DebugLog(false, "Torrentclient closed for: %s", client)
 	client.Close()
 }
 

@@ -4,7 +4,6 @@ package metadata
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -35,10 +34,12 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 	tmpDir := filepath.Join(os.TempDir(), "repo-tmp")
 	defer os.RemoveAll(tmpDir)
 
-	fmt.Println("🌐 Fetching metadata from GitHub...")
+	repo := fmt.Sprintf("https://github.com/%s.git", cfg.GitHubRepo)
 
-	if err := exec.Command("git", "clone", "--depth=1", fmt.Sprintf("https://github.com/%s.git", cfg.GitHubRepo), tmpDir).Run(); err != nil {
-		return fmt.Errorf("❌ git clone failed: %w", err)
+	fmt.Printf("🌐 Fetching metadata from %s...", repo)
+
+	if err := exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
+		return fmt.Errorf("git clone failed: %w", err)
 	}
 
 	srcDir := filepath.Join(tmpDir, "One Pace")
@@ -51,11 +52,11 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("❌ failed to copy metadata: %w", err)
+		return fmt.Errorf("failed to copy metadata: %w", err)
 	}
 
 	if err := BuildMetadataIndex(baseDir); err != nil {
-		return fmt.Errorf("❌ failed to build metadata index: %w", err)
+		return fmt.Errorf("failed to build metadata index: %w", err)
 	}
 
 	fmt.Println("✅ Metadata fetch and indexing complete.")
@@ -102,7 +103,7 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("❌ metadata indexing failed: %w", err)
+		return nil, fmt.Errorf("metadata indexing failed: %w", err)
 	}
 
 	calculateSeasonRanges(index)
@@ -115,14 +116,14 @@ func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 	path := filepath.Join(baseDir, "metadata-index.json")
 	f, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("❌ could not create index file: %w", err)
+		return fmt.Errorf("could not create index file: %w", err)
 	}
 	defer f.Close()
 
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(index); err != nil {
-		return fmt.Errorf("❌ could not encode metadata index: %w", err)
+		return fmt.Errorf("could not encode metadata index: %w", err)
 	}
 
 	metadataCache = index // cache immediately after saving
@@ -259,7 +260,7 @@ func copyDir(src, dst string) error {
 			return os.MkdirAll(destPath, 0755)
 		}
 
-		return copyFile(path, destPath, info.Mode())
+		return shared.CopyFile(path, destPath, info.Mode())
 	})
 }
 
@@ -285,31 +286,6 @@ func syncDir(src, dst string) error {
 			return nil
 		}
 
-		return copyFile(path, destPath, info.Mode())
+		return shared.CopyFile(path, destPath, info.Mode())
 	})
-}
-
-// copyFile copies from src to dst with permissions
-func copyFile(src, dst string, perm os.FileMode) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return err
-	}
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, in); err != nil {
-		return err
-	}
-
-	return os.Chmod(dst, perm)
 }

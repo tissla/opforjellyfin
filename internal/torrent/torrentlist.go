@@ -157,12 +157,12 @@ func extractIDFromLink(link string) int {
 }
 
 // unused old version
-func extractChapterRange(title string) string {
-	re := regexp.MustCompile(`\[(\d{1,4})-(\d{1,4})\]`)
-	if match := re.FindStringSubmatch(title); len(match) == 3 {
-		start, _ := strconv.Atoi(match[1])
-		end, _ := strconv.Atoi(match[2])
-		return fmt.Sprintf("%d-%d", start, end)
-	}
-	return ""
-}
+//func extractChapterRange(title string) string {
+//	re := regexp.MustCompile(`\[(\d{1,4})-(\d{1,4})\]`)
+//	if match := re.FindStringSubmatch(title); len(match) == 3 {
+//		start, _ := strconv.Atoi(match[1])
+//		end, _ := strconv.Atoi(match[2])
+//		return fmt.Sprintf("%d-%d", start, end)
+//	}
+//	return ""
+//}

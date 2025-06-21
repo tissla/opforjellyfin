@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
@@ -16,12 +17,23 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 	shared.ClearActiveDownloads()
 
 	// start downloads
-	go StartMultipleDownloads(context.Background(), entries, outDir)
+	var wg sync.WaitGroup
+	wg.Add(len(entries))
+
+	for _, e := range entries {
+		go func(entry shared.TorrentEntry) {
+			defer wg.Done()
+			_ = StartTorrent(context.Background(), entry, outDir)
+		}(e)
+	}
 
 	// start progress-UI
 	fmt.Println("🚀 Downloads started!")
 	time.Sleep(1 * time.Second)
 	ui.FollowProgress()
+
+	//wait for all downloads to finish, and files to get placed
+	wg.Wait()
 
 	// get placement data
 	downloads := shared.GetActiveDownloads()

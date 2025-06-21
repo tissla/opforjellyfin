@@ -34,6 +34,7 @@ type TorrentDownload struct {
 	ChapterRange string
 }
 
+// entry for dl
 type TorrentEntry struct {
 	Title         string
 	Quality       string
