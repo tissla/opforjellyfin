@@ -1,4 +1,5 @@
-package internal
+// log/logging.go
+package logger
 
 import (
 	"fmt"

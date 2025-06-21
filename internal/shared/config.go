@@ -1,5 +1,5 @@
-// internal/config.go
-package internal
+// shared/config.go
+package shared
 
 import (
 	"encoding/json"
@@ -9,25 +9,16 @@ import (
 	"path/filepath"
 )
 
-type Config struct {
-	TargetDir     string `json:"target_dir"`
-	GitHubRepo    string `json:"github_base_url"`
-	TorrentAPIURL string `json:"torrent_api_url"`
+var defaultCfg = Config{
+	TargetDir:     "",
+	GitHubRepo:    "tissla/one-pace-jellyfin",
+	TorrentAPIURL: "https://nyaa.si",
 }
 
+// loads config-file file, creates it if it does not exist
 func LoadConfig() Config {
-	path := getConfigPath()
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		defaultCfg := Config{
-			TargetDir:     "",
-			GitHubRepo:    "tissla/one-pace-jellyfin",
-			TorrentAPIURL: "https://nyaa.si",
-		}
-		SaveConfig(defaultCfg)
-		fmt.Printf("📁 Created default config at: %s\n", path)
-		return defaultCfg
-	}
+	path := EnsureConfigExists()
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -42,6 +33,7 @@ func LoadConfig() Config {
 	return cfg
 }
 
+// writes static config file from config object, as json
 func SaveConfig(cfg Config) {
 	path := getConfigPath()
 
@@ -55,38 +47,19 @@ func SaveConfig(cfg Config) {
 	}
 }
 
-func SetDir(dir string, force bool) {
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		log.Fatalf("❌ Invalid directory: %v", err)
-	}
-
-	cfg := LoadConfig()
-	cfg.TargetDir = abs
-	SaveConfig(cfg)
-
-	fmt.Println("✅ Default target directory set to:", abs)
-
-	if force {
-		FetchAllMetadata(abs, cfg)
-	} else {
-		SyncMetadata(abs, cfg)
-	}
-}
-
-func EnsureConfigExists() {
+// creates default config if no config-file is found
+func EnsureConfigExists() string {
 	path := getConfigPath()
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		defaultCfg := Config{
-			TargetDir:     "",
-			GitHubRepo:    "tissla/one-pace-jellyfin",
-			TorrentAPIURL: "https://nyaa.si",
-		}
+
 		SaveConfig(defaultCfg)
 		fmt.Printf("📁 Created default config at: %s\n", path)
 	}
+
+	return path
 }
 
+// returns the config filepath from the OS's default config directory
 func getConfigPath() string {
 	dirname, err := os.UserConfigDir()
 	if err != nil {

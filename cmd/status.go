@@ -3,7 +3,7 @@ package cmd
 
 import (
 	"fmt"
-	"opforjellyfin/internal"
+	"opforjellyfin/internal/shared"
 
 	"github.com/spf13/cobra"
 )
@@ -12,7 +12,7 @@ var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show currently active downloads",
 	Run: func(cmd *cobra.Command, args []string) {
-		downloads := internal.GetActiveDownloads()
+		downloads := shared.GetActiveDownloads()
 		if len(downloads) == 0 {
 			fmt.Println("📭 No active downloads.")
 			return

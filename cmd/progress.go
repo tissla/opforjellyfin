@@ -2,7 +2,7 @@
 package cmd
 
 import (
-	"opforjellyfin/internal"
+	"opforjellyfin/internal/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -11,7 +11,7 @@ var progressCmd = &cobra.Command{
 	Use:   "progress",
 	Short: "Show progress for all active downloads",
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.FollowProgress()
+		ui.FollowProgress()
 	},
 }
 

@@ -2,7 +2,11 @@
 package cmd
 
 import (
-	"opforjellyfin/internal"
+	"fmt"
+	"log"
+	"opforjellyfin/internal/metadata"
+	"opforjellyfin/internal/shared"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -14,8 +18,28 @@ var setDirCmd = &cobra.Command{
 	Short: "Set the default target directory",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.SetDir(args[0], force)
+		SetDir(args[0], force)
 	},
+}
+
+// sets a directory as the configs default directory, then fills it with metadata
+func SetDir(dir string, force bool) {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		log.Fatalf("❌ Invalid directory: %v", err)
+	}
+
+	cfg := shared.LoadConfig()
+	cfg.TargetDir = abs
+	shared.SaveConfig(cfg)
+
+	fmt.Println("✅ Default target directory set to:", abs)
+
+	if force {
+		metadata.FetchAllMetadata(abs, cfg)
+	} else {
+		metadata.SyncMetadata(abs, cfg)
+	}
 }
 
 func init() {

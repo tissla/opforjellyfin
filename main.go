@@ -7,18 +7,19 @@ import (
 	"time"
 
 	"opforjellyfin/cmd"
-	"opforjellyfin/internal"
+	"opforjellyfin/internal/logger"
+	"opforjellyfin/internal/shared"
 
 	"github.com/briandowns/spinner"
 	"github.com/charmbracelet/fang"
 )
 
 func main() {
-	internal.EnsureConfigExists()
+	shared.EnsureConfigExists()
 
 	for _, arg := range os.Args {
 		if arg == "--debug" {
-			internal.EnableDebugLogging()
+			logger.EnableDebugLogging()
 			break
 		}
 	}

@@ -3,7 +3,9 @@ package cmd
 
 import (
 	"fmt"
-	"opforjellyfin/internal"
+	"opforjellyfin/internal/shared"
+	"opforjellyfin/internal/torrent"
+	"opforjellyfin/internal/ui"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,14 +23,14 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all available One Pace seasons and specials",
 	Run: func(cmd *cobra.Command, args []string) {
-		allTorrents, err := internal.FetchOnePaceTorrents()
+		allTorrents, err := torrent.FetchOnePaceTorrents()
 		if err != nil {
 			fmt.Printf("❌ Error: %v\n", err)
 			return
 		}
 
 		// Apply filters after keys are assigned
-		var filtered []internal.TorrentEntry
+		var filtered []shared.TorrentEntry
 		for _, t := range allTorrents {
 			if applyFilters(t) {
 				filtered = append(filtered, t)
@@ -61,17 +63,17 @@ var listCmd = &cobra.Command{
 
 			truncatedTitle := truncate(t.SeasonName, 20)
 
-			row := internal.RenderRow(
+			row := ui.RenderRow(
 				"%s - %s: %-30s Have? %s | Meta: %s | %-9s | %-5s | %-3s seeders",
 				alternate,
-				internal.StyleFactory("DKEY", internal.Style.LBlue),
-				internal.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), internal.Style.Pink),
-				internal.StyleFactory(truncatedTitle, internal.Style.LBlue),
+				ui.StyleFactory("DKEY", ui.Style.LBlue),
+				ui.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), ui.Style.Pink),
+				ui.StyleFactory(truncatedTitle, ui.Style.LBlue),
 				haveMark,
 				metaMark,
 				t.ChapterRange,
 				t.Quality,
-				internal.StyleByRange(t.Seeders, 0, 10),
+				ui.StyleByRange(t.Seeders, 0, 10),
 			)
 
 			fmt.Println(row)
@@ -81,7 +83,7 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func applyFilters(t internal.TorrentEntry) bool {
+func applyFilters(t shared.TorrentEntry) bool {
 	// --specials only
 	if onlySpecials && !t.IsSpecial {
 		return false

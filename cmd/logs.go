@@ -2,7 +2,7 @@
 package cmd
 
 import (
-	"opforjellyfin/internal"
+	"opforjellyfin/internal/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -15,9 +15,9 @@ var logsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if lines <= 0 {
-			lines = 20 
+			lines = 20
 		}
-		internal.ShowLogEntries(lines)
+		logger.ShowLogEntries(lines)
 
 	},
 }

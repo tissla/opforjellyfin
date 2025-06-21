@@ -3,12 +3,11 @@ package cmd
 
 import (
 	"fmt"
+	"opforjellyfin/internal/shared"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"opforjellyfin/internal"
 
 	"github.com/spf13/cobra"
 )
@@ -19,7 +18,7 @@ var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Show current configuration and library status",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := internal.LoadConfig()
+		cfg := shared.LoadConfig()
 		fmt.Println("🔧 Current Configuration:")
 		fmt.Printf("📂 Target Directory: %s\n", cfg.TargetDir)
 

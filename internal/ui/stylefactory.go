@@ -1,9 +1,10 @@
-// internal/stylefactory.go
-package internal
+// ui/stylefactory.go
+package ui
 
 import (
 	"fmt"
 	"math"
+	"opforjellyfin/internal/logger"
 	"os"
 	"strings"
 
@@ -109,7 +110,7 @@ func RenderRow(format string, isAlt bool, args ...interface{}) string {
 	final += reset
 
 	// debug
-	DebugLog(false, "[RenderRow] RAW: %q\n[RenderRow] VISIBLE: %q\n[RenderRow] RENDERED: %q\n", row, visible, final)
+	logger.DebugLog(false, "[RenderRow] RAW: %q\n[RenderRow] VISIBLE: %q\n[RenderRow] RENDERED: %q\n", row, visible, final)
 
 	return final
 }

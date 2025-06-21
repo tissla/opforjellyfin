@@ -1,9 +1,11 @@
-// internal/torrentlist.go
-package internal
+// torrent/torrentlist.go
+package torrent
 
 import (
 	"fmt"
 	"net/http"
+	"opforjellyfin/internal/metadata"
+	"opforjellyfin/internal/shared"
 	"regexp"
 	"sort"
 	"strconv"
@@ -12,26 +14,11 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-type TorrentEntry struct {
-	Title         string
-	Quality       string
-	DownloadKey   int
-	SeasonName    string
-	Seeders       int
-	rawIndex      int
-	TorrentLink   string
-	TorrentID     int
-	ChapterRange  string
-	MetaDataAvail bool
-	IsSpecial     bool
-	HaveIt        bool
-}
-
 // FetchOnePaceTorrents loads torrents from nyaa.si or configured tracker
-func FetchOnePaceTorrents() ([]TorrentEntry, error) {
-	cfg := LoadConfig()
+func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
+	cfg := shared.LoadConfig()
 	baseURL := strings.TrimRight(cfg.TorrentAPIURL, "/")
-	var rawEntries []TorrentEntry
+	var rawEntries []shared.TorrentEntry
 
 	page := 1
 	for {
@@ -61,25 +48,26 @@ func FetchOnePaceTorrents() ([]TorrentEntry, error) {
 			seedersStr := s.Find("td:nth-child(6)").Text()
 			torrentLink, _ := s.Find("td:nth-child(3) a[href^='/download/']").Attr("href")
 			torrentID := extractIDFromLink(torrentLink)
-			chapterRange := extractChapterRange(title)
+			//chapterRange := extractChapterRange(title)
+			chapterRange, _ := shared.ExtractChapterKeyFromTitle(title)
 
 			seeders, _ := strconv.Atoi(strings.TrimSpace(seedersStr))
 			quality := parseQuality(title)
 			rawIndex, seasonName := parseSeasonMeta(title)
 
 			if torrentLink != "" && strings.Contains(strings.ToLower(title), "one pace") {
-				rawEntries = append(rawEntries, TorrentEntry{
+				rawEntries = append(rawEntries, shared.TorrentEntry{
 					Title:         title,
 					Quality:       quality,
 					SeasonName:    seasonName,
 					Seeders:       seeders,
-					rawIndex:      rawIndex,
+					RawIndex:      rawIndex,
 					TorrentLink:   torrentLink,
 					TorrentID:     torrentID,
 					ChapterRange:  chapterRange,
 					IsSpecial:     chapterRange == "",
-					MetaDataAvail: HaveMetadata(chapterRange),
-					HaveIt:        HaveVideoFile(chapterRange),
+					MetaDataAvail: metadata.HaveMetadata(chapterRange),
+					HaveIt:        metadata.HaveVideoFile(chapterRange),
 				})
 			}
 		})
@@ -87,12 +75,13 @@ func FetchOnePaceTorrents() ([]TorrentEntry, error) {
 		page++
 	}
 
-	// Sort by rawIndex ascending, then by seeders descending
+	// sort by rawIndex ascending, then by seeders descending
+	// maybe move this out to helpers
 	sort.SliceStable(rawEntries, func(i, j int) bool {
-		if rawEntries[i].rawIndex == rawEntries[j].rawIndex {
+		if rawEntries[i].RawIndex == rawEntries[j].RawIndex {
 			return rawEntries[i].Seeders > rawEntries[j].Seeders
 		}
-		return rawEntries[i].rawIndex < rawEntries[j].rawIndex
+		return rawEntries[i].RawIndex < rawEntries[j].RawIndex
 	})
 
 	rangeToKey := map[string]int{}
@@ -167,6 +156,7 @@ func extractIDFromLink(link string) int {
 	return 0
 }
 
+// unused old version
 func extractChapterRange(title string) string {
 	re := regexp.MustCompile(`\[(\d{1,4})-(\d{1,4})\]`)
 	if match := re.FindStringSubmatch(title); len(match) == 3 {

@@ -1,10 +1,13 @@
 // internal/filters.go
 package internal
 
-import "strings"
+import (
+	"opforjellyfin/internal/shared"
+	"strings"
+)
 
-func FilterByTitle(list []TorrentEntry, keyword string) []TorrentEntry {
-	var filtered []TorrentEntry
+func FilterByTitle(list []shared.TorrentEntry, keyword string) []shared.TorrentEntry {
+	var filtered []shared.TorrentEntry
 	for _, entry := range list {
 		if strings.Contains(strings.ToLower(entry.SeasonName), strings.ToLower(keyword)) {
 			filtered = append(filtered, entry)
@@ -13,8 +16,8 @@ func FilterByTitle(list []TorrentEntry, keyword string) []TorrentEntry {
 	return filtered
 }
 
-func FilterBySeasonRange(list []TorrentEntry, from, to int) []TorrentEntry {
-	var filtered []TorrentEntry
+func FilterBySeasonRange(list []shared.TorrentEntry, from, to int) []shared.TorrentEntry {
+	var filtered []shared.TorrentEntry
 	for _, entry := range list {
 		if entry.DownloadKey >= from && entry.DownloadKey <= to {
 			filtered = append(filtered, entry)

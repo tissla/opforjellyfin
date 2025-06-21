@@ -1,5 +1,5 @@
-// internal/metadata.go
-package internal
+// metadata/metadata.go
+package metadata
 
 import (
 	"encoding/json"
@@ -9,39 +9,29 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
+
+	"opforjellyfin/internal/shared"
 )
 
 var (
-	metadataCache     *MetadataIndex
+	metadataCache     *shared.MetadataIndex
 	metadataCacheOnce sync.Once
 )
 
-// MetadataIndex represents structured metadata for seasons and episodes.
-type MetadataIndex struct {
-	Seasons map[string]SeasonIndex `json:"seasons"`
-}
-
-// SeasonIndex represents episodes and their manga chapter ranges.
-type SeasonIndex struct {
-	Range    string            `json:"range"`
-	Episodes map[string]string `json:"episodes"`
-}
-
 // FetchAllMetadata clones and indexes metadata from GitHub.
-func FetchAllMetadata(baseDir string, cfg Config) error {
+func FetchAllMetadata(baseDir string, cfg shared.Config) error {
 	return cloneAndCopyRepo(baseDir, cfg, false)
 }
 
 // SyncMetadata clones and syncs metadata updates from GitHub.
-func SyncMetadata(baseDir string, cfg Config) error {
+func SyncMetadata(baseDir string, cfg shared.Config) error {
 	return cloneAndCopyRepo(baseDir, cfg, true)
 }
 
-func cloneAndCopyRepo(baseDir string, cfg Config, syncOnly bool) error {
+// Main dataobtainer, builds or rebuilds index when complete.
+func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 	tmpDir := filepath.Join(os.TempDir(), "repo-tmp")
 	defer os.RemoveAll(tmpDir)
 
@@ -82,8 +72,8 @@ func BuildMetadataIndex(baseDir string) error {
 	return saveMetadataIndex(index, baseDir)
 }
 
-func buildIndexFromDir(baseDir string) (*MetadataIndex, error) {
-	index := &MetadataIndex{Seasons: make(map[string]SeasonIndex)}
+func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
+	index := &shared.MetadataIndex{Seasons: make(map[string]shared.SeasonIndex)}
 
 	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !isEpisodeNFO(d.Name()) {
@@ -104,7 +94,7 @@ func buildIndexFromDir(baseDir string) (*MetadataIndex, error) {
 		epKey := fmt.Sprintf("S%02sE%02s", season, episode)
 
 		if _, exists := index.Seasons[seasonKey]; !exists {
-			index.Seasons[seasonKey] = SeasonIndex{Episodes: make(map[string]string)}
+			index.Seasons[seasonKey] = shared.SeasonIndex{Episodes: make(map[string]string)}
 		}
 
 		index.Seasons[seasonKey].Episodes[epKey] = chapterRange
@@ -120,7 +110,8 @@ func buildIndexFromDir(baseDir string) (*MetadataIndex, error) {
 	return index, nil
 }
 
-func saveMetadataIndex(index *MetadataIndex, baseDir string) error {
+// saves file and creates cache
+func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 	path := filepath.Join(baseDir, "metadata-index.json")
 	f, err := os.Create(path)
 	if err != nil {
@@ -147,11 +138,11 @@ func HaveMetadata(chapterRange string) bool {
 
 	loadMetadataCache()
 
-	targetStart, targetEnd := parseRange(chapterRange)
+	targetStart, targetEnd := shared.ParseRange(chapterRange)
 
 	for _, season := range metadataCache.Seasons {
 		for _, epRange := range season.Episodes {
-			a, b := parseRange(epRange)
+			a, b := shared.ParseRange(epRange)
 			if rangesOverlap(targetStart, targetEnd, a, b) {
 				return true
 			}
@@ -169,11 +160,11 @@ func HaveVideoFile(chapterRange string) bool {
 
 	loadMetadataCache()
 
-	targetStart, targetEnd := parseRange(chapterRange)
+	targetStart, targetEnd := shared.ParseRange(chapterRange)
 
 	for seasonKey, season := range metadataCache.Seasons {
 		for epKey, epRange := range season.Episodes {
-			start, end := parseRange(epRange)
+			start, end := shared.ParseRange(epRange)
 			if rangesOverlap(targetStart, targetEnd, start, end) {
 				if videoExistsForEpisode(seasonKey, epKey) {
 					return true
@@ -186,12 +177,13 @@ func HaveVideoFile(chapterRange string) bool {
 }
 
 // helper for havevideofile
+// maybe move pathing so that it takes the full path to season-folder as argument
 func videoExistsForEpisode(seasonKey, epKey string) bool {
-	cfg := LoadConfig()
+	cfg := shared.LoadConfig()
 	baseDir := cfg.TargetDir
 
-	seasonNum := extractSeasonNumberFromKey(epKey)
-	episodeNum := extractEpisodeNumber(epKey)
+	seasonNum := shared.ExtractSeasonNumberFromKey(epKey)
+	episodeNum := shared.ExtractEpisodeNumberFromKey(epKey)
 
 	dir := filepath.Join(baseDir, seasonKey)
 
@@ -204,35 +196,26 @@ func videoExistsForEpisode(seasonKey, epKey string) bool {
 	return len(mkvMatch) > 0 || len(mp4Match) > 0
 }
 
-// extract season from epkey e.g: S05E04 -> "05"
-func extractSeasonNumberFromKey(episodeKey string) string {
-	re := regexp.MustCompile(`S(\d+)E\d+`)
-	matches := re.FindStringSubmatch(episodeKey)
-	if len(matches) == 2 {
-		return matches[1]
-	}
-	return "00"
-}
-
 // more helpers
 
+// we read metadata-index.json once when we need it, and if multiple checks are needed we read the cache
 func loadMetadataCache() {
 	metadataCacheOnce.Do(func() {
-		cfg := LoadConfig()
+		cfg := shared.LoadConfig()
 		data, err := os.ReadFile(filepath.Join(cfg.TargetDir, "metadata-index.json"))
 		if err != nil {
-			metadataCache = &MetadataIndex{}
+			metadataCache = &shared.MetadataIndex{}
 			return
 		}
 		json.Unmarshal(data, &metadataCache)
 	})
 }
 
-func calculateSeasonRanges(index *MetadataIndex) {
+func calculateSeasonRanges(index *shared.MetadataIndex) {
 	for skey, sidx := range index.Seasons {
 		min, max := 99999, -1
 		for _, cr := range sidx.Episodes {
-			start, end := parseRange(cr)
+			start, end := shared.ParseRange(cr)
 			if start < min {
 				min = start
 			}
@@ -249,36 +232,13 @@ func isEpisodeNFO(filename string) bool {
 	return strings.HasSuffix(filename, ".nfo") && !strings.Contains(filename, "season") && !strings.Contains(filename, "tvshow")
 }
 
+// important
 func extractEpisodeMetadata(data []byte) (string, string, string) {
-	return extractXMLTag(data, "season"), extractXMLTag(data, "episode"), extractChapterRangeFromNFO(string(data))
-}
-
-func parseRange(r string) (int, int) {
-	parts := strings.Split(r, "-")
-	if len(parts) != 2 {
-		return -1, -1
-	}
-	a, _ := strconv.Atoi(parts[0])
-	b, _ := strconv.Atoi(parts[1])
-	return a, b
+	return shared.ExtractXMLTag(data, "season"), shared.ExtractXMLTag(data, "episode"), shared.ExtractChapterRangeFromNFO(string(data))
 }
 
 func rangesOverlap(a1, a2, b1, b2 int) bool {
 	return a1 <= b2 && b1 <= a2
-}
-
-func extractChapterRangeFromNFO(content string) string {
-	re := regexp.MustCompile(`(?i)Manga\s*Chapter\(s\)?:\s*(\d+)(?:[\s,-]*(\d+))?`)
-	match := re.FindStringSubmatch(content)
-	if len(match) >= 2 {
-		start := match[1]
-		end := match[2]
-		if end == "" {
-			end = start
-		}
-		return fmt.Sprintf("%s-%s", start, end)
-	}
-	return ""
 }
 
 // copyDir copies all files from src to dst
