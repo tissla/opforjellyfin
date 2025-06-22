@@ -3,12 +3,12 @@ package ui
 
 import (
 	"fmt"
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/charmbracelet/x/ansi"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -25,19 +25,22 @@ func FollowProgress() {
 
 	downloads := shared.GetActiveDownloads()
 	if len(downloads) == 0 {
-		fmt.Println("📭 No active downloads.")
+		logger.DebugLog(true, "📭 No active downloads.")
 		return
 	}
 
+	// bar map
 	bars := make(map[int]*mpb.Bar)
+
 	p := mpb.New(mpb.WithWidth(40))
 
 	for _, td := range downloads {
+
 		bar := p.New(
 			td.TotalSize,
 			mpb.BarStyle().Lbound("[").Filler("▓").Tip("█").Padding("░").Rbound("]"),
 			mpb.PrependDecorators(
-				decor.Name(ansi.Truncate(td.Title, 20, "..")),
+				decor.Name(AnsiPadRight(td.Title, 20)),
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(
@@ -71,9 +74,11 @@ func FollowProgress() {
 				if !ok {
 					continue
 				}
+
 				if td.Done {
 					bar.SetTotal(td.TotalSize, true)
 					bar.SetCurrent(td.TotalSize)
+
 				} else {
 					bar.SetTotal(td.TotalSize, false)
 					bar.SetCurrent(td.Progress)

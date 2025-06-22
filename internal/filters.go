@@ -9,7 +9,7 @@ import (
 func FilterByTitle(list []shared.TorrentEntry, keyword string) []shared.TorrentEntry {
 	var filtered []shared.TorrentEntry
 	for _, entry := range list {
-		if strings.Contains(strings.ToLower(entry.SeasonName), strings.ToLower(keyword)) {
+		if strings.Contains(strings.ToLower(entry.TorrentName), strings.ToLower(keyword)) {
 			filtered = append(filtered, entry)
 		}
 	}

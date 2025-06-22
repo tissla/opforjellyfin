@@ -2,10 +2,12 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"math"
-	"opforjellyfin/internal/logger"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -35,8 +37,27 @@ func StyleFactory(text string, style lipgloss.Style) string {
 }
 
 // tone a number between green and red depending on its value in relation to min, max (i didnt find this in lipgloss)
-func StyleByRange(value, min, max int) string {
-	text := fmt.Sprintf("%d", value)
+func StyleByRange(input interface{}, min, max int) string {
+
+	var (
+		text  string
+		value int
+	)
+
+	switch v := input.(type) {
+	case int:
+		value = v
+		text = strconv.Itoa(v)
+	case string:
+		text = v
+		var err error
+		value, err = findIntValueInString(v)
+		if err != nil {
+			return text
+		}
+	default:
+		return fmt.Sprintf("%v", input) // fallback
+	}
 
 	if value <= min {
 		return lipgloss.NewStyle().
@@ -109,8 +130,43 @@ func RenderRow(format string, isAlt bool, args ...interface{}) string {
 
 	final += reset
 
-	// debug
-	logger.DebugLog(false, "[RenderRow] RAW: %q\n[RenderRow] VISIBLE: %q\n[RenderRow] RENDERED: %q\n", row, visible, final)
+	// debug, this spits out ALOT of lines when used with 'list'.
+	//logger.DebugLog(false, "[RenderRow] RAW: %q\n[RenderRow] VISIBLE: %q\n[RenderRow] RENDERED: %q\n", row, visible, final)
 
 	return final
+}
+
+// AnsiPadLeft pads text with spaces on the left
+func AnsiPadLeft(text string, width int) string {
+	trunc := ansi.Truncate(text, width, "")
+	visible := runewidth.StringWidth(ansi.Strip(trunc))
+	if visible < width {
+		padding := strings.Repeat(" ", width-visible)
+		return padding + trunc
+	}
+	return trunc
+}
+
+// AnsiPadsRight pads text with spaces on the right
+func AnsiPadRight(text string, width int) string {
+	trunc := ansi.Truncate(text, width, "")
+	visible := runewidth.StringWidth(trunc)
+	if visible < width {
+		trunc += strings.Repeat(" ", width-visible)
+	}
+	return trunc
+}
+
+// helper for StyleByRange
+func findIntValueInString(text string) (int, error) {
+	re := regexp.MustCompile(`\d+`)
+	match := re.FindString(text)
+	if match == "" {
+		return 0, errors.New("no number found in string")
+	}
+	value, err := strconv.Atoi(match)
+	if err != nil {
+		return 0, err
+	}
+	return value, nil
 }

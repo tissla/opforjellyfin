@@ -2,7 +2,6 @@
 package matcher
 
 import (
-	"encoding/json"
 	"fmt"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
@@ -13,7 +12,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-func MatchAndPlaceVideo(videoPath, metadataDir string) (string, error) {
+func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataIndex) (string, error) {
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
 		return "", nil
@@ -31,11 +30,6 @@ func MatchAndPlaceVideo(videoPath, metadataDir string) (string, error) {
 	}
 	logger.DebugLog(false, "chapterkey extracted: %s from %s", chapterKey, fileName)
 
-	index, err := loadMetadataIndex(metadataDir)
-	if err != nil {
-		return "", fmt.Errorf("matcher: could not load metadata index: %w", err)
-	}
-
 	dstPathNoSuffix := findMetadataMatch(chapterKey, index)
 
 	logger.DebugLog(false, "dstPath for chapterKey %s will be %s", chapterKey, dstPathNoSuffix)
@@ -49,7 +43,7 @@ func MatchAndPlaceVideo(videoPath, metadataDir string) (string, error) {
 	}
 
 	//relative path for logs
-	relPath, _ := filepath.Rel(metadataDir, finalPath)
+	relPath, _ := filepath.Rel(defaultDir, finalPath)
 	//debug
 	logger.DebugLog(false, fmt.Sprintf("placed: %s → %s", fileName, relPath))
 
@@ -61,19 +55,6 @@ func MatchAndPlaceVideo(videoPath, metadataDir string) (string, error) {
 	return msg, nil
 }
 
-// sets pointer to MetadataIndex, from file
-func loadMetadataIndex(metadataDir string) (*shared.MetadataIndex, error) {
-	data, err := os.ReadFile(filepath.Join(metadataDir, "metadata-index.json"))
-	if err != nil {
-		return nil, err
-	}
-	var index shared.MetadataIndex
-	if err := json.Unmarshal(data, &index); err != nil {
-		return nil, err
-	}
-	return &index, nil
-}
-
 // returns directory to place file, without suffix
 func findMetadataMatch(chapterKey string, index *shared.MetadataIndex) string {
 
@@ -83,11 +64,13 @@ func findMetadataMatch(chapterKey string, index *shared.MetadataIndex) string {
 
 	seasonFolder, seasonIndex := findSeasonForChapter(chapterKey, index)
 	if seasonFolder == "" {
+		logger.DebugLog(false, "findMetaDataMatch: failed to find Season-folder")
 		return strayfolder
 	}
 
 	episodeKey := findEpisodeKeyForChapter(chapterKey, seasonIndex)
 	if episodeKey == "" {
+		logger.DebugLog(false, "findMetaDataMatch: failed to find episode-key")
 		return strayfolder
 	}
 
@@ -97,6 +80,7 @@ func findMetadataMatch(chapterKey string, index *shared.MetadataIndex) string {
 
 	files, err := os.ReadDir(seasonDir)
 	if err != nil {
+		logger.DebugLog(false, "findMetaDataMatch: error reading season directory")
 		return strayfolder
 	}
 
@@ -107,6 +91,7 @@ func findMetadataMatch(chapterKey string, index *shared.MetadataIndex) string {
 		}
 	}
 
+	logger.DebugLog(false, "findMetaDataMatch: no match found, returning strayfolder")
 	return strayfolder
 }
 

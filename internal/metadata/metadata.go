@@ -14,6 +14,8 @@ import (
 	"opforjellyfin/internal/shared"
 )
 
+// TODO: sort this file, and add cool animations where possible
+
 var (
 	metadataCache     *shared.MetadataIndex
 	metadataCacheOnce sync.Once
@@ -137,7 +139,7 @@ func HaveMetadata(chapterRange string) bool {
 		return false
 	}
 
-	loadMetadataCache()
+	LoadMetadataCache()
 
 	targetStart, targetEnd := shared.ParseRange(chapterRange)
 
@@ -159,7 +161,7 @@ func HaveVideoFile(chapterRange string) bool {
 		return false
 	}
 
-	loadMetadataCache()
+	LoadMetadataCache()
 
 	targetStart, targetEnd := shared.ParseRange(chapterRange)
 
@@ -199,8 +201,9 @@ func videoExistsForEpisode(seasonKey, epKey string) bool {
 
 // more helpers
 
-// we read metadata-index.json once when we need it, and if multiple checks are needed we read the cache
-func loadMetadataCache() {
+// we read metadata-index.json once when we need it, and if multiple checks are needed we read the cache.
+// returns a reference to the index-variable
+func LoadMetadataCache() *shared.MetadataIndex {
 	metadataCacheOnce.Do(func() {
 		cfg := shared.LoadConfig()
 		data, err := os.ReadFile(filepath.Join(cfg.TargetDir, "metadata-index.json"))
@@ -210,8 +213,11 @@ func loadMetadataCache() {
 		}
 		json.Unmarshal(data, &metadataCache)
 	})
+
+	return metadataCache
 }
 
+// helpers
 func calculateSeasonRanges(index *shared.MetadataIndex) {
 	for skey, sidx := range index.Seasons {
 		min, max := 99999, -1

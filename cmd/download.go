@@ -49,9 +49,10 @@ var downloadCmd = &cobra.Command{
 			var match *shared.TorrentEntry
 			for _, t := range torrentList {
 				if t.DownloadKey == num && (quality == "" || t.Quality == quality) {
-					tmp := t
-					match = &tmp
-					break
+					if match == nil || t.Seeders > match.Seeders {
+						tmp := t
+						match = &tmp
+					}
 				}
 			}
 
@@ -68,10 +69,10 @@ var downloadCmd = &cobra.Command{
 			}
 
 			dKey := ui.StyleFactory(fmt.Sprintf("%4d", match.DownloadKey), ui.Style.Pink)
-			title := ui.StyleFactory(match.SeasonName, ui.Style.LBlue)
+			title := ui.StyleFactory(match.TorrentName, ui.Style.LBlue)
 
 			logger.DebugLog(true, "🔍 Matched DownloadKey %s → %s (%s) [%s]", dKey, title, match.Quality, match.ChapterRange)
-			logger.DebugLog(true, "🎬 Starting download: %s (%s)\n", match.SeasonName, match.Quality)
+			logger.DebugLog(true, "🎬 Starting download: %s (%s)\n", match.TorrentName, match.Quality)
 			matches = append(matches, *match)
 		}
 

@@ -2,6 +2,8 @@ package shared
 
 import "time"
 
+// TODO: cleanup unused properties
+
 // config file
 type Config struct {
 	TargetDir     string `json:"target_dir"`
@@ -22,16 +24,18 @@ type SeasonIndex struct {
 
 // download struct
 type TorrentDownload struct {
-	Title        string
-	TorrentID    int
-	Started      time.Time
-	OutDir       string
-	Progress     int64
-	TotalSize    int64
-	Messages     []string
-	Done         bool
-	Error        string
-	ChapterRange string
+	Title           string
+	TorrentID       int
+	Started         time.Time
+	OutDir          string
+	Progress        int64    // used by ui
+	TotalSize       int64    // used by ui
+	Messages        []string // used
+	Error           string   // stores specific torrent errors
+	ChapterRange    string
+	ProgressMessage string //used for placement messages after download is done
+	Done            bool   // set to true when torrent is downloaded
+	Placed          bool   // set to true when files are placed, before clearing active downloads
 }
 
 // entry for dl
@@ -39,9 +43,9 @@ type TorrentEntry struct {
 	Title         string
 	Quality       string
 	DownloadKey   int
-	SeasonName    string
+	TorrentName   string
 	Seeders       int
-	RawIndex      int
+	RawIndex      int // RawIndex is based on ChapterRange, used for placement
 	TorrentLink   string
 	TorrentID     int
 	ChapterRange  string

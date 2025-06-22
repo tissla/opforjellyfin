@@ -9,11 +9,14 @@ import (
 	"strings"
 )
 
-func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload) {
+func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, index *shared.MetadataIndex) {
 	filesChecked := 0
 	filesPlaced := 0
 
 	// collect all paths
+
+	td.ProgressMessage = fmt.Sprintf("Walking through directory %s", tmpDir)
+
 	var vidPaths []string
 	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -38,16 +41,22 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload) {
 		logger.DebugLog(false, "→ Found: %s", path)
 		filesChecked++
 
-		msg, err := MatchAndPlaceVideo(path, outDir)
+		td.ProgressMessage = fmt.Sprintf("Placing.. %s", filepath.Base(path))
+
+		msg, err := MatchAndPlaceVideo(path, outDir, index)
 		if err != nil {
 			logger.DebugLog(true, "Error placing file: %v", err)
 			td.Error += fmt.Sprintf("%s\n", err)
 		} else if msg != "" {
 			filesPlaced++
+			td.ProgressMessage = msg
 			td.Messages = append(td.Messages, msg)
 			shared.SaveTorrentDownload(td)
 		}
 	}
+
+	td.Placed = true
+	shared.SaveTorrentDownload(td)
 
 	logger.DebugLog(false, "File placement done: %d checked, %d placed", filesChecked, filesPlaced)
 }

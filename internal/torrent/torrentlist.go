@@ -47,19 +47,21 @@ func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
 			title := s.Find("td:nth-child(2) a").Last().Text()
 			seedersStr := s.Find("td:nth-child(6)").Text()
 			torrentLink, _ := s.Find("td:nth-child(3) a[href^='/download/']").Attr("href")
+
 			torrentID := extractIDFromLink(torrentLink)
-			//chapterRange := extractChapterRange(title)
+
 			chapterRange, _ := shared.ExtractChapterKeyFromTitle(title)
 
 			seeders, _ := strconv.Atoi(strings.TrimSpace(seedersStr))
 			quality := parseQuality(title)
-			rawIndex, seasonName := parseSeasonMeta(title)
+			rawIndex := extractRawIndex(chapterRange)
+			torrentName := extractTorrentName(title)
 
 			if torrentLink != "" && strings.Contains(strings.ToLower(title), "one pace") {
 				rawEntries = append(rawEntries, shared.TorrentEntry{
 					Title:         title,
 					Quality:       quality,
-					SeasonName:    seasonName,
+					TorrentName:   torrentName,
 					Seeders:       seeders,
 					RawIndex:      rawIndex,
 					TorrentLink:   torrentLink,
@@ -126,23 +128,30 @@ func parseQuality(title string) string {
 	}
 }
 
-// parseSeasonMeta extracts raw index and season name
-func parseSeasonMeta(title string) (int, string) {
-	re := regexp.MustCompile(`(?i)\[(\d+)-\d+\]\s+(.+?)\s+\[`)
-	matches := re.FindStringSubmatch(title)
-	if len(matches) >= 3 {
-		rawIndex, _ := strconv.Atoi(matches[1])
-		seasonName := strings.TrimSpace(matches[2])
-		return rawIndex, seasonName
+// extracts raw index
+func extractRawIndex(rangeStr string) int {
+	if rangeStr == "" {
+		return 9999 // specials
 	}
+	parts := strings.Split(rangeStr, "-")
+	if len(parts) > 0 {
+		if n, err := strconv.Atoi(parts[0]); err == nil {
+			return n
+		}
+	}
+	return 9999
+}
 
-	// fallback: strip tags and use remaining
-	clean := regexp.MustCompile(`\[.*?\]`).ReplaceAllString(title, "")
-	clean = strings.TrimSpace(clean)
-	if clean == "" {
-		clean = "Unknown"
+// extracts torrent name for display
+func extractTorrentName(title string) string {
+	parts := regexp.MustCompile(`\[[^\]]+\]`).Split(title, -1)
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			return part
+		}
 	}
-	return 9999, clean
+	return "Unknown"
 }
 
 // extractIDFromLink parses numeric ID from a /download/xxxxxxx.torrent link
@@ -155,14 +164,3 @@ func extractIDFromLink(link string) int {
 	}
 	return 0
 }
-
-// unused old version
-//func extractChapterRange(title string) string {
-//	re := regexp.MustCompile(`\[(\d{1,4})-(\d{1,4})\]`)
-//	if match := re.FindStringSubmatch(title); len(match) == 3 {
-//		start, _ := strconv.Atoi(match[1])
-//		end, _ := strconv.Atoi(match[2])
-//		return fmt.Sprintf("%d-%d", start, end)
-//	}
-//	return ""
-//}

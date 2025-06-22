@@ -61,10 +61,10 @@ var listCmd = &cobra.Command{
 				metaMark = "✅"
 			}
 
-			truncatedTitle := truncate(t.SeasonName, 20)
+			truncatedTitle := shared.Truncate(t.TorrentName, 20)
 
 			row := ui.RenderRow(
-				"%s - %s: %-30s Have? %s | Meta: %s | %-9s | %-5s | %-3s seeders",
+				"%s - %s: %-30s Have? %s | Meta: %s | %-9s | %s | %s seeders",
 				alternate,
 				ui.StyleFactory("DKEY", ui.Style.LBlue),
 				ui.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), ui.Style.Pink),
@@ -72,8 +72,8 @@ var listCmd = &cobra.Command{
 				haveMark,
 				metaMark,
 				t.ChapterRange,
-				t.Quality,
-				ui.StyleByRange(t.Seeders, 0, 10),
+				ui.AnsiPadLeft(ui.StyleByRange(t.Quality, 400, 1000), 5),
+				ui.AnsiPadLeft(ui.StyleByRange(t.Seeders, 0, 10), 3),
 			)
 
 			fmt.Println(row)
@@ -100,17 +100,10 @@ func applyFilters(t shared.TorrentEntry) bool {
 		}
 	}
 	// title filter
-	if titleFilter != "" && !strings.Contains(strings.ToLower(t.SeasonName), strings.ToLower(titleFilter)) {
+	if titleFilter != "" && !strings.Contains(strings.ToLower(t.TorrentName), strings.ToLower(titleFilter)) {
 		return false
 	}
 	return true
-}
-
-func truncate(s string, n int) string {
-	if len(s) > n {
-		return s[:n-1] + "…"
-	}
-	return s
 }
 
 func init() {
