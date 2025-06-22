@@ -54,7 +54,7 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 1. Set your download directory before doing anything else. All your metadata will be stored here, and downloads will be matched to their proper folders.
 
     ```bash
-    ./opfor setDir "/media/anime/One Piece"
+    ./opfor setDir "/media/One Piece/One Pace"
     ```
 
 1. Find all available episodes with 'list', or use the -t flag to specify a title, or -r flag to specify a key-range.
@@ -76,6 +76,16 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 I hope to continually update [metadata here!](https://github.com/tissla/one-pace-jellyfin)
 
 The 'sync' command allows the user to stay up to date with new additions to the metadata-repo.
+
+### Steps to make sure Jellyfin doesn't mess with the metadata:
+
+1. Create a library with no metadata-fetchers active just for One Pace. Disable all of them!
+
+1. Make sure the show is **unlocked** for changes.
+
+1. Run ```./opfor sync``` again if Jellyfin messed up your .nfo files before this.
+
+1. Rescan library with **unlocked** metadata and *no fetchers active*.
 
 ## 🤝 Contributions
 
