@@ -69,7 +69,7 @@ func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
 					ChapterRange:  chapterRange,
 					IsSpecial:     chapterRange == "",
 					MetaDataAvail: metadata.HaveMetadata(chapterRange),
-					HaveIt:        metadata.HaveVideoFile(chapterRange),
+					HaveIt:        metadata.HaveVideoStatus(chapterRange),
 				})
 			}
 		})

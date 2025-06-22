@@ -23,6 +23,9 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all available One Pace seasons and specials",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		spinner := ui.NewMultirowSpinner(ui.Animations["Searcher"], 4)
+
 		allTorrents, err := torrent.FetchOnePaceTorrents()
 		if err != nil {
 			fmt.Printf("❌ Error: %v\n", err)
@@ -47,16 +50,20 @@ var listCmd = &cobra.Command{
 
 		alternate := false
 
+		spinner.Stop()
+
 		fmt.Println("📚 Filtered Download List:\n")
 		for _, t := range filtered {
 
 			// bools
-			haveMark := "❌"
 			metaMark := "❌"
 
-			if t.HaveIt {
-				haveMark = "✅"
-			}
+			haveMark := map[int]string{
+				0: "❌",
+				1: "🟠",
+				2: "✅",
+			}[t.HaveIt]
+
 			if t.MetaDataAvail {
 				metaMark = "✅"
 			}

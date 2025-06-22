@@ -51,5 +51,5 @@ type TorrentEntry struct {
 	ChapterRange  string
 	MetaDataAvail bool
 	IsSpecial     bool
-	HaveIt        bool
+	HaveIt        int
 }

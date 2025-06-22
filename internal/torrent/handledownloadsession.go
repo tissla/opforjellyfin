@@ -25,7 +25,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 	allTDs, _ := StartDownloads(entries, outDir)
 
 	// cool spinner
-	spinner := ui.NewFileMoveSpinner(" 🗃️ Placing files")
+	spinner := ui.NewSpinner(" 🗃️ Placing files", ui.Animations["MoviePlacement"])
 
 	// placing files
 	StartPlacement(allTDs, outDir)

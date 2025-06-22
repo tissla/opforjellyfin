@@ -41,7 +41,7 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	fmt.Printf("🌐 Fetching metadata from " + repo + "\n")
 
-	spinner := ui.NewFileMoveSpinner("Downloading.. ")
+	spinner := ui.NewSpinner("🗃️ Downloading.. ", ui.Animations["MetaFetcher"])
 
 	if err := exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
 		spinner.Stop()
@@ -148,6 +148,7 @@ func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 }
 
 // HaveMetadata checks if metadata exists for given chapterRange.
+// TODO: make more rigid
 func HaveMetadata(chapterRange string) bool {
 	if chapterRange == "" {
 		return false
@@ -155,12 +156,13 @@ func HaveMetadata(chapterRange string) bool {
 
 	LoadMetadataCache()
 
-	targetStart, targetEnd := shared.ParseRange(chapterRange)
-
 	for _, season := range metadataCache.Seasons {
+
+		if season.Range == chapterRange {
+			return true
+		}
 		for _, epRange := range season.Episodes {
-			a, b := shared.ParseRange(epRange)
-			if rangesOverlap(targetStart, targetEnd, a, b) {
+			if epRange == chapterRange {
 				return true
 			}
 		}
@@ -169,48 +171,64 @@ func HaveMetadata(chapterRange string) bool {
 	return false
 }
 
-// HaveVideoFile checks if a video file exists for a given chapter range.
-func HaveVideoFile(chapterRange string) bool {
+// checks a range in metadata. 0 = does not have, 1 = have some, 2 = have all
+func HaveVideoStatus(chapterRange string) int {
 	if chapterRange == "" {
-		return false
+		return 0
 	}
 
 	LoadMetadataCache()
+	cfg := shared.LoadConfig()
+	baseDir := cfg.TargetDir
 
 	targetStart, targetEnd := shared.ParseRange(chapterRange)
 
+	totalRelevant := 0
+	totalFound := 0
+
 	for seasonKey, season := range metadataCache.Seasons {
+		seasonDir := filepath.Join(baseDir, seasonKey)
+
 		for epKey, epRange := range season.Episodes {
 			start, end := shared.ParseRange(epRange)
-			if rangesOverlap(targetStart, targetEnd, start, end) {
-				if videoExistsForEpisode(seasonKey, epKey) {
-					return true
+
+			if start >= targetStart && end <= targetEnd {
+				totalRelevant++
+
+				seasonNum := shared.ExtractSeasonNumberFromKey(epKey)
+				episodeNum := shared.ExtractEpisodeNumberFromKey(epKey)
+				expectedPrefix := fmt.Sprintf("One Pace - S%sE%s -", seasonNum, episodeNum)
+
+				files, err := os.ReadDir(seasonDir)
+				if err != nil {
+					continue
+				}
+
+				for _, file := range files {
+					if file.IsDir() {
+						continue
+					}
+					name := file.Name()
+					if strings.HasPrefix(name, expectedPrefix) &&
+						(strings.HasSuffix(name, ".mkv") || strings.HasSuffix(name, ".mp4")) {
+						totalFound++
+						break
+					}
 				}
 			}
 		}
 	}
 
-	return false
-}
-
-// helper for havevideofile
-// maybe move pathing so that it takes the full path to season-folder as argument
-func videoExistsForEpisode(seasonKey, epKey string) bool {
-	cfg := shared.LoadConfig()
-	baseDir := cfg.TargetDir
-
-	seasonNum := shared.ExtractSeasonNumberFromKey(epKey)
-	episodeNum := shared.ExtractEpisodeNumberFromKey(epKey)
-
-	dir := filepath.Join(baseDir, seasonKey)
-
-	mkvPath := filepath.Join(dir, fmt.Sprintf("One Pace - S%sE%s - *.mkv", seasonNum, episodeNum))
-	mp4Path := filepath.Join(dir, fmt.Sprintf("One Pace - S%sE%s - *.mp4", seasonNum, episodeNum))
-
-	mkvMatch, _ := filepath.Glob(mkvPath)
-	mp4Match, _ := filepath.Glob(mp4Path)
-
-	return len(mkvMatch) > 0 || len(mp4Match) > 0
+	if totalRelevant == 0 {
+		return 0 // no metadata episodes found
+	}
+	if totalFound == 0 {
+		return 0 // metadata found but no files
+	}
+	if totalFound < totalRelevant {
+		return 1 // partial match
+	}
+	return 2 // all matching episodes found
 }
 
 // more helpers
@@ -310,8 +328,12 @@ func syncDir(src, dst string) error {
 			return os.MkdirAll(destPath, 0755)
 		}
 
-		if stat, err := os.Stat(destPath); err == nil && stat.Size() == info.Size() {
-			return nil
+		if _, err := os.Stat(destPath); err == nil {
+			existingData, err1 := os.ReadFile(destPath)
+			newData, err2 := os.ReadFile(path)
+			if err1 == nil && err2 == nil && string(existingData) == string(newData) {
+				return nil // identical, skip
+			}
 		}
 
 		return shared.CopyFile(path, destPath, info.Mode())
