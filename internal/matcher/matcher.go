@@ -97,8 +97,12 @@ func findMetadataMatch(chapterKey string, index *shared.MetadataIndex) string {
 
 // exact match
 func findEpisodeKeyForChapter(chapterKey string, sindex shared.SeasonIndex) string {
+	normKey := shared.NormalizeDash(chapterKey)
+
+	logger.DebugLog(false, "findEpisodeKeyForChapter: chapterKey: %s - normKey: %s - sindex: %+v", chapterKey, normKey, sindex.Episodes)
+
 	for episodeKey, epRange := range sindex.Episodes {
-		if epRange == chapterKey {
+		if shared.NormalizeDash(epRange) == normKey {
 			return episodeKey
 		}
 	}

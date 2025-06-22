@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"opforjellyfin/internal/shared"
+	"opforjellyfin/internal/ui"
 )
 
 // TODO: sort this file, and add cool animations where possible
@@ -38,9 +39,12 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	repo := fmt.Sprintf("https://github.com/%s.git", cfg.GitHubRepo)
 
-	fmt.Printf("🌐 Fetching metadata from %s...", repo)
+	fmt.Printf("🌐 Fetching metadata from " + repo + "\n")
+
+	spinner := ui.NewFileMoveSpinner("Downloading.. ")
 
 	if err := exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
+		spinner.Stop()
 		return fmt.Errorf("git clone failed: %w", err)
 	}
 
@@ -54,12 +58,19 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 	}
 
 	if err != nil {
+		spinner.Stop()
 		return fmt.Errorf("failed to copy metadata: %w", err)
 	}
 
 	if err := BuildMetadataIndex(baseDir); err != nil {
+		spinner.Stop()
 		return fmt.Errorf("failed to build metadata index: %w", err)
 	}
+
+	spinner.Stop()
+	path := filepath.Join(baseDir, "metadata-index.json")
+
+	fmt.Println("✅ Metadata index written to", path)
 
 	fmt.Println("✅ Metadata fetch and indexing complete.")
 	return nil
@@ -94,6 +105,9 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 		}
 
 		seasonKey := fmt.Sprintf("Season %s", season)
+		if season == "00" || season == "0" {
+			seasonKey = "Specials"
+		}
 		epKey := fmt.Sprintf("S%02sE%02s", season, episode)
 
 		if _, exists := index.Seasons[seasonKey]; !exists {
@@ -129,7 +143,7 @@ func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 	}
 
 	metadataCache = index // cache immediately after saving
-	fmt.Println("✅ Metadata index written to", path)
+
 	return nil
 }
 
@@ -219,7 +233,15 @@ func LoadMetadataCache() *shared.MetadataIndex {
 
 // helpers
 func calculateSeasonRanges(index *shared.MetadataIndex) {
+
 	for skey, sidx := range index.Seasons {
+
+		if skey == "Specials" {
+			sidx.Range = "00-00"
+			index.Seasons[skey] = sidx
+			continue
+		}
+
 		min, max := 99999, -1
 		for _, cr := range sidx.Episodes {
 			start, end := shared.ParseRange(cr)

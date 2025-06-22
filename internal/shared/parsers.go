@@ -95,3 +95,9 @@ func ExtractSeasonNumberFromKey(episodeKey string) string {
 	}
 	return "00"
 }
+
+// sometimes the dash is wrong
+func NormalizeDash(s string) string {
+	// Replace en-dash and em-dash with hyphen-minus
+	return strings.NewReplacer("–", "-", "—", "-").Replace(s)
+}

@@ -21,7 +21,7 @@ import (
 // used for writing to json-file for live tracking of concurrent background downloads. currently just saves progress
 func progressLog(msg string, td *shared.TorrentDownload) {
 
-	logger.DebugLog(false, msg, td.TorrentID)
+	logger.DebugLog(false, fmt.Sprintf("%s with torrentID: %d", msg, td.TorrentID))
 	shared.SaveTorrentDownload(td)
 }
 
