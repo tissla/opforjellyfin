@@ -3,7 +3,6 @@ package torrent
 import (
 	"context"
 	"fmt"
-	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/matcher"
 	"opforjellyfin/internal/metadata"
 	"opforjellyfin/internal/shared"
@@ -17,9 +16,6 @@ import (
 )
 
 func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
-
-	// cleanup eventual residue
-	shared.ClearActiveDownloads()
 
 	// start downloads (with UIprogress)
 	allTDs, _ := StartDownloads(entries, outDir)
@@ -42,10 +38,6 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 			}
 		}
 	}
-
-	//cleanup
-	logger.DebugLog(false, "CLEANING UP DOWNLOADS!")
-	shared.ClearActiveDownloads()
 
 	fmt.Println("\n✅ All downloads finished.")
 }
@@ -75,8 +67,13 @@ func StartDownloads(entries []shared.TorrentEntry, outDir string) ([]*shared.Tor
 	fmt.Println("🚀 Downloads started!")
 
 	//wait for downloads to kick it up
-	time.Sleep(1 * time.Second)
-	//start UI
+	for {
+		if len(shared.GetActiveDownloads()) >= len(entries) {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	//start ui
 	ui.FollowProgress()
 
 	wg.Wait()

@@ -77,7 +77,7 @@ I hope to continually update [metadata here!](https://github.com/tissla/one-pace
 
 The 'sync' command allows the user to stay up to date with new additions to the metadata-repo.
 
-### Steps to make sure Jellyfin doesn't mess with the metadata:
+### Steps to make sure Jellyfin doesn't mess with the metadata
 
 1. Create a library with no metadata-fetchers active just for One Pace. Disable all of them!
 

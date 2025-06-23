@@ -19,11 +19,6 @@ import (
 )
 
 // used for writing to json-file for live tracking of concurrent background downloads. currently just saves progress
-func progressLog(msg string, td *shared.TorrentDownload) {
-
-	logger.DebugLog(false, fmt.Sprintf("%s with torrentID: %d", msg, td.TorrentID))
-	shared.SaveTorrentDownload(td)
-}
 
 // main torrent download and tracker
 func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string) (*shared.TorrentDownload, error) {
@@ -43,13 +38,13 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 
 	// get torrent meta-info
 	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().TorrentAPIURL, entry.TorrentID)
-	progressLog(fmt.Sprintf("Fetching torrent: %s", torrentURL), td)
+	logger.DebugLog(false, "Fetching torrent: %s, ID: %s", torrentURL, td)
 
 	// get metadata
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, torrentURL, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		progressLog("HTTP request for metadata failed", td)
+		logger.DebugLog(false, "HTTP request for metadata failed %s", td)
 		return cleanupWithError(td, err)
 	}
 	defer resp.Body.Close()
@@ -86,7 +81,8 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 	// get torrent metadata
 	select {
 	case <-t.GotInfo():
-		progressLog("Torrent metadata loaded", td)
+		td.TotalSize = t.Length()
+		logger.DebugLog(false, "Torrent metadata loaded: %s", td)
 	case <-time.After(20 * time.Second):
 		return cleanupWithError(td, fmt.Errorf("timeout waiting for torrent info"))
 	case <-ctx.Done():
@@ -95,8 +91,9 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 
 	// start download
 	td.TotalSize = t.Length()
-	shared.SaveTorrentDownload(td)
+
 	t.DownloadAll()
+	shared.SaveTorrentDownload(td)
 
 	// watch progress, save to activefile
 	for t.BytesMissing() > 0 {
@@ -116,7 +113,7 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 
 	closeWithLogs(client)
 
-	progressLog("Download complete", td)
+	logger.DebugLog(false, "Download complete: %s", td)
 
 	return td, nil
 }
@@ -131,9 +128,6 @@ func closeWithLogs(client *torrent.Client) {
 func cleanupWithError(td *shared.TorrentDownload, err error) (*shared.TorrentDownload, error) {
 	logger.DebugLog(false, "cleanupWithError called:", err)
 	td.Error = err.Error()
-	progressLog(td.Error, td)
 
-	// we clear all downloads when this happens
-	shared.ClearActiveDownloads()
 	return td, err
 }

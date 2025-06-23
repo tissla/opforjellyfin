@@ -7,14 +7,15 @@ import (
 	"opforjellyfin/internal/shared"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
+// follow progress of downloads and store in cool progress bars
 func FollowProgress() {
-	// wait for active.json to fill up
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if len(shared.GetActiveDownloads()) > 0 {
@@ -23,35 +24,21 @@ func FollowProgress() {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	downloads := shared.GetActiveDownloads()
-	if len(downloads) == 0 {
+	if len(shared.GetActiveDownloads()) == 0 {
 		logger.DebugLog(true, "📭 No active downloads.")
 		return
 	}
 
-	// bar map
-	bars := make(map[int]*mpb.Bar)
+	var (
+		barMu = sync.Mutex{}
+		bars  = make(map[int]*mpb.Bar)
+		seen  = make(map[int]bool)
+	)
+
+	// TODO: make dynamic for terminal window width
+	// more styling in general!
 
 	p := mpb.New(mpb.WithWidth(40))
-
-	for _, td := range downloads {
-
-		bar := p.New(
-			td.TotalSize,
-			mpb.BarStyle().Lbound("[").Filler("▓").Tip("█").Padding("░").Rbound("]"),
-			mpb.PrependDecorators(
-				decor.Name(AnsiPadRight(td.Title, 20)),
-			),
-			mpb.AppendDecorators(
-				decor.OnComplete(
-					decor.Percentage(decor.WCSyncSpace),
-					"✔️ Done",
-				),
-			),
-		)
-		bars[td.TorrentID] = bar
-	}
-
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -59,30 +46,64 @@ func FollowProgress() {
 	signal.Notify(signalChan, os.Interrupt)
 
 	done := make(chan struct{})
+
 	go func() {
-		p.Wait()
-		close(done)
+		for {
+			time.Sleep(1 * time.Second)
+			allDone := true
+			for _, td := range shared.GetActiveDownloads() {
+				if !td.Done {
+					allDone = false
+					break
+				}
+			}
+			if allDone {
+				p.Wait()
+				close(done)
+				return
+			}
+		}
 	}()
 
 	for {
 		select {
 		case <-ticker.C:
-			downloads = shared.GetActiveDownloads()
+			downloads := shared.GetActiveDownloads()
 
 			for _, td := range downloads {
-				bar, ok := bars[td.TorrentID]
-				if !ok {
-					continue
+				if _, exists := seen[td.TorrentID]; !exists && td.TotalSize > 0 {
+					barMu.Lock()
+					bar := p.New(
+						td.TotalSize,
+						mpb.BarStyle().Lbound("[").Filler("▓").Tip("█").Padding("░").Rbound("]"),
+						mpb.PrependDecorators(
+							decor.Name(AnsiPadRight(td.Title, 20)),
+						),
+						mpb.AppendDecorators(
+							decor.OnComplete(
+								decor.Percentage(decor.WCSyncSpace),
+								"✔️ Done",
+							),
+						),
+					)
+					bars[td.TorrentID] = bar
+					seen[td.TorrentID] = true
+					barMu.Unlock()
 				}
+			}
 
-				if td.Done {
-					bar.SetTotal(td.TotalSize, true)
-					bar.SetCurrent(td.TotalSize)
-
-				} else {
-					bar.SetTotal(td.TotalSize, false)
-					bar.SetCurrent(td.Progress)
+			for _, td := range downloads {
+				barMu.Lock()
+				if bar, ok := bars[td.TorrentID]; ok {
+					if td.Done {
+						bar.SetTotal(td.TotalSize, true)
+						bar.SetCurrent(td.TotalSize)
+					} else {
+						bar.SetTotal(td.TotalSize, false)
+						bar.SetCurrent(td.Progress)
+					}
 				}
+				barMu.Unlock()
 			}
 
 		case <-signalChan:

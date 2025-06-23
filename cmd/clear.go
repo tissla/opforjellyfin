@@ -5,7 +5,6 @@ package cmd
 import (
 	"fmt"
 	"opforjellyfin/internal/shared"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -14,10 +13,9 @@ var clearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Clear all active downloads and temporary files",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := shared.ClearActiveDownloads(); err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to clear active downloads: %v\n", err)
-			os.Exit(1)
-		}
+
+		shared.ClearActiveDownloads()
+
 		fmt.Println("✅ Cleared active downloads and temporary files.")
 	},
 }
