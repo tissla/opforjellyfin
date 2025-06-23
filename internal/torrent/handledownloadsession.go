@@ -39,6 +39,8 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 		}
 	}
 
+	shared.ClearActiveDownloads()
+
 	fmt.Println("\n✅ All downloads finished.")
 }
 

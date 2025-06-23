@@ -3,6 +3,10 @@
 package shared
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -32,4 +36,21 @@ func ClearActiveDownloads() {
 	mu.Lock()
 	defer mu.Unlock()
 	activeDownloads = make(map[int]*TorrentDownload)
+	CleanupTempDirs()
+}
+
+func CleanupTempDirs() error {
+	files, err := os.ReadDir(os.TempDir())
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), "opfor-tmp-") {
+			path := filepath.Join(os.TempDir(), f.Name())
+			if err := os.RemoveAll(path); err != nil {
+				fmt.Printf("⚠️  Failed to remove %s: %v\n", path, err)
+			}
+		}
+	}
+	return nil
 }
