@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -68,13 +67,6 @@ func StartDownloads(entries []shared.TorrentEntry, outDir string) ([]*shared.Tor
 
 	fmt.Println("🚀 Downloads started!")
 
-	//wait for downloads to kick it up
-	for {
-		if len(shared.GetActiveDownloads()) >= len(entries) {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
 	//start ui
 	ui.FollowProgress()
 

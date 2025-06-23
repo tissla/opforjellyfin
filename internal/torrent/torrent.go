@@ -3,8 +3,10 @@ package torrent
 
 import (
 	"context"
+	"io"
 
 	"fmt"
+	"log"
 	"net/http"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
@@ -23,6 +25,10 @@ import (
 // main torrent download and tracker
 func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string) (*shared.TorrentDownload, error) {
 	// init download obj
+
+	logWriter := log.Writer()
+	log.SetOutput(io.Discard)
+	defer log.SetOutput(logWriter)
 
 	dKey := ui.StyleFactory(fmt.Sprintf("%4d", entry.DownloadKey), ui.Style.Pink)
 	title := ui.StyleFactory(entry.TorrentName, ui.Style.LBlue)
