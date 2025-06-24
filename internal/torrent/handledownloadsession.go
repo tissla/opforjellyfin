@@ -3,6 +3,7 @@ package torrent
 import (
 	"context"
 	"fmt"
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/matcher"
 	"opforjellyfin/internal/metadata"
 	"opforjellyfin/internal/shared"
@@ -73,7 +74,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 
 	shared.ClearActiveDownloads()
 
-	fmt.Println("\n✅ All downloads finished.")
+	logger.DebugLog(true, "\n✅ All downloads finished and placed.")
 }
 
 // sequential

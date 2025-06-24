@@ -2,17 +2,19 @@ package shared
 
 import (
 	"fmt"
+	"opforjellyfin/internal/logger"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-// strict version, used for torrents
-func ExtractChapterRangeFromTitle(title string) (string, error) {
+// strict version, used for torrents. Tries to extract Chapter Range from a string [One Pace] [x-y* returns x-y
+func ExtractChapterRangeFromTitle(title string) string {
 	re := regexp.MustCompile(`(?i)\[One Pace\]\[([^\]]+)\]`)
 	matches := re.FindStringSubmatch(title)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("could not extract chapter info from title: %s", title)
+		logger.DebugLog(false, "could not extract chapter info from title: %s", title)
+		return ""
 	}
 
 	chapterInfo := matches[1]
@@ -21,14 +23,15 @@ func ExtractChapterRangeFromTitle(title string) (string, error) {
 	first := strings.TrimSpace(parts[0])
 
 	if matched, _ := regexp.MatchString(`^\d+$`, first); matched {
-		return fmt.Sprintf("%s-%s", first, first), nil
+		return fmt.Sprintf("%s-%s", first, first)
 	}
 
 	if matched, _ := regexp.MatchString(`^\d+-\d+$`, first); matched {
-		return first, nil
+		return first
 	}
 
-	return "", fmt.Errorf("could not parse chapter format: %s", first)
+	logger.DebugLog(false, "could not parse chapter format: %s", first)
+	return ""
 }
 
 // extracts the two ints separated by "-"

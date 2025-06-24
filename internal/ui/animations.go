@@ -1,7 +1,7 @@
 package ui
 
 //emojistore:
-// 📁 🎞️ 🌐 🗃️ 🕵️ 🗄️
+// 📁 🎞️ 🌐 🗃️ 🕵️ 🗄️ ➝ ⏳
 
 // animation map
 // Spinners

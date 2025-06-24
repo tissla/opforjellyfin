@@ -19,7 +19,12 @@ var (
 func SaveTorrentDownload(td *TorrentDownload) {
 	mu.Lock()
 	defer mu.Unlock()
-	activeDownloads[td.TorrentID] = td
+	existing, ok := activeDownloads[td.TorrentID]
+	if ok {
+		*existing = *td // overwrite
+	} else {
+		activeDownloads[td.TorrentID] = td
+	}
 }
 
 func GetActiveDownloads() []*TorrentDownload {
@@ -39,6 +44,7 @@ func GetActiveDownloads() []*TorrentDownload {
 	return list
 }
 
+// clear cache and remove temp download directories
 func ClearActiveDownloads() {
 	mu.Lock()
 	defer mu.Unlock()

@@ -15,7 +15,7 @@ import (
 	"opforjellyfin/internal/ui"
 )
 
-// TODO: sort this file, and add cool animations where possible
+// TODO: sort this file, and mutex for reading/writing to cache
 
 var (
 	metadataCache     *shared.MetadataIndex

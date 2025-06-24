@@ -1,5 +1,5 @@
-// torrent/torrentlist.go
-package torrent
+// scraper/scraper.go
+package scraper
 
 import (
 	"fmt"
@@ -50,11 +50,11 @@ func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
 
 			torrentID := extractIDFromLink(torrentLink)
 
-			chapterRange, _ := shared.ExtractChapterRangeFromTitle(title)
+			chapterRange := shared.ExtractChapterRangeFromTitle(title)
+			rawIndex := extractRawIndex(chapterRange)
 
 			seeders, _ := strconv.Atoi(strings.TrimSpace(seedersStr))
 			quality := parseQuality(title)
-			rawIndex := extractRawIndex(chapterRange)
 			torrentName := extractTorrentName(title)
 
 			if torrentLink != "" && strings.Contains(strings.ToLower(title), "one pace") {
@@ -90,6 +90,7 @@ func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
 	key := 1
 	specialKey := 9999
 
+	// assign downloadKey after rawIndex
 	for i := range rawEntries {
 		cr := rawEntries[i].ChapterRange
 		if cr == "" {

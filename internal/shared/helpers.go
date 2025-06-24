@@ -31,14 +31,6 @@ func CopyFile(src, dst string, perm os.FileMode) error {
 	return os.Chmod(dst, perm)
 }
 
-// rather use ansi.Truncate
-func Truncate(s string, n int) string {
-	if len(s) > n {
-		return s[:n-1] + "…"
-	}
-	return s
-}
-
 // used by Metadata.go
 func RangesOverlap(a1, a2, b1, b2 int) bool {
 	return a1 <= b2 && b1 <= a2

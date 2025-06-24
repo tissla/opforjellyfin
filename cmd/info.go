@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var verbose bool
+var verboseInfo bool
 
 var infoCmd = &cobra.Command{
 	Use:   "info",
@@ -33,7 +33,7 @@ var infoCmd = &cobra.Command{
 			return
 		}
 
-		if verbose {
+		if verboseInfo {
 			fmt.Printf("📡 Torrent Provider: %s\n", cfg.TorrentAPIURL)
 			fmt.Printf("🐙 Metadata Source:  https://github.com/%s\n", cfg.GitHubRepo)
 		}
@@ -62,7 +62,7 @@ var infoCmd = &cobra.Command{
 		sort.Strings(seasonFolders)
 		fmt.Printf("📦 Seasons Downloaded: %d\n", len(seasonFolders))
 
-		if verbose && len(seasonFolders) > 0 {
+		if verboseInfo && len(seasonFolders) > 0 {
 			fmt.Println("\n📁 Season folders:")
 			for _, s := range seasonFolders {
 				fmt.Printf("   - %s\n", s)
@@ -72,6 +72,6 @@ var infoCmd = &cobra.Command{
 }
 
 func init() {
-	infoCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show season folder names")
+	infoCmd.Flags().BoolVarP(&verboseInfo, "verbose", "v", false, "Show season folder names")
 	rootCmd.AddCommand(infoCmd)
 }

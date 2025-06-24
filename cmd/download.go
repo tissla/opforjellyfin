@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
 	"opforjellyfin/internal/logger"
+	"opforjellyfin/internal/scraper"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/torrent"
 	"opforjellyfin/internal/ui"
@@ -29,18 +29,20 @@ var downloadCmd = &cobra.Command{
 		spinner := ui.NewMultirowSpinner(ui.Animations["DownloadPrep"], 3)
 
 		if len(args) < 1 {
-			log.Fatalf("You must specify at least one downloadKey")
+			logger.DebugLog(true, "⚠️ You must specify atleast one download-key")
+			return
 		}
 
 		cfg := shared.LoadConfig()
 		if cfg.TargetDir == "" {
-			log.Fatalf("⚠️  No target directory set. Use 'setDir <path>' first.")
+			logger.DebugLog(true, "⚠️ No target directory set. Use 'setDir <path>' first.")
+			return
 		}
 
-		torrentList, err := torrent.FetchOnePaceTorrents()
+		torrentList, err := scraper.FetchOnePaceTorrents()
 		if err != nil {
-			logger.DebugLog(false, "❌ Failed to fetch torrents: %v", err)
-			log.Fatalf("❌ Failed to fetch torrents: %v", err)
+			logger.DebugLog(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
+			return
 		}
 
 		// stop spinner
@@ -49,9 +51,11 @@ var downloadCmd = &cobra.Command{
 		for _, arg := range args {
 			num, err := strconv.Atoi(arg)
 			if err != nil {
-				log.Fatalf("Invalid downloadKey: %s", arg)
+				logger.DebugLog(true, "❌ Invalid syntax: %s", arg)
+				return
 			}
 
+			// sort
 			var match *shared.TorrentEntry
 			for _, t := range torrentList {
 				if t.DownloadKey == num && (quality == "" || t.Quality == quality) {
@@ -62,14 +66,16 @@ var downloadCmd = &cobra.Command{
 				}
 			}
 
+			// no match for download-key
 			if match == nil {
 				logger.DebugLog(true, "⚠️  No torrent found for key %d and quality '%s'", num, quality)
 				continue
 			}
 
+			// maybe rewrite this part
 			if forceKey != "" {
 				if len(args) > 1 {
-					log.Fatalf("❌ --forcekey may only be used with a single DownloadKey")
+					logger.DebugLog(true, "❌ --forcekey may only be used with a single DownloadKey")
 				}
 				match.ChapterRange = forceKey
 			}
@@ -94,7 +100,6 @@ var downloadCmd = &cobra.Command{
 }
 
 func init() {
-	//downloadCmd.Flags().BoolVarP(&follow, "follow", "f", false, "Follow download progress live")
 	downloadCmd.Flags().StringVarP(&quality, "quality", "Q", "", "Only download with specific quality (e.g. 1080p)")
 	downloadCmd.Flags().StringVar(&forceKey, "forcekey", "", "Override chapter range (only for single downloadKey)")
 
