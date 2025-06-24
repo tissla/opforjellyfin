@@ -50,7 +50,7 @@ func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
 
 			torrentID := extractIDFromLink(torrentLink)
 
-			chapterRange, _ := shared.ExtractChapterKeyFromTitle(title)
+			chapterRange, _ := shared.ExtractChapterRangeFromTitle(title)
 
 			seeders, _ := strconv.Atoi(strings.TrimSpace(seedersStr))
 			quality := parseQuality(title)

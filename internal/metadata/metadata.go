@@ -87,7 +87,9 @@ func BuildMetadataIndex(baseDir string) error {
 }
 
 func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
-	index := &shared.MetadataIndex{Seasons: make(map[string]shared.SeasonIndex)}
+	index := &shared.MetadataIndex{
+		Seasons: make(map[string]shared.SeasonIndex),
+	}
 
 	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !isEpisodeNFO(d.Name()) {
@@ -108,13 +110,23 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 		if season == "00" || season == "0" {
 			seasonKey = "Specials"
 		}
-		epKey := fmt.Sprintf("S%02sE%02s", season, episode)
 
+		// chapterRange used by index
+		normalized := shared.NormalizeDash(chapterRange)
+		// filename withouth .nfo for the index
+		epTitle := strings.TrimSuffix(d.Name(), ".nfo")
+
+		// check if SeasonIndex is there
 		if _, exists := index.Seasons[seasonKey]; !exists {
-			index.Seasons[seasonKey] = shared.SeasonIndex{Episodes: make(map[string]string)}
+			index.Seasons[seasonKey] = shared.SeasonIndex{
+				EpisodeRange: make(map[string]shared.EpisodeData),
+			}
+		}
+		// just store title, use baseDir+seasonKey+epTitle+mp4/mkv for storing
+		index.Seasons[seasonKey].EpisodeRange[normalized] = shared.EpisodeData{
+			Title: epTitle,
 		}
 
-		index.Seasons[seasonKey].Episodes[epKey] = chapterRange
 		return nil
 	})
 
@@ -122,6 +134,7 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 		return nil, fmt.Errorf("metadata indexing failed: %w", err)
 	}
 
+	// put range on season
 	calculateSeasonRanges(index)
 
 	return index, nil
@@ -142,27 +155,30 @@ func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 		return fmt.Errorf("could not encode metadata index: %w", err)
 	}
 
+	fmt.Println("✅ Saved metadata index at", path)
 	metadataCache = index // cache immediately after saving
 
 	return nil
 }
 
 // HaveMetadata checks if metadata exists for given chapterRange.
-// TODO: make more rigid
 func HaveMetadata(chapterRange string) bool {
 	if chapterRange == "" {
 		return false
 	}
 
 	LoadMetadataCache()
+	norm := shared.NormalizeDash(chapterRange)
 
 	for _, season := range metadataCache.Seasons {
-
-		if season.Range == chapterRange {
+		// season range match instantly
+		if shared.NormalizeDash(season.Range) == norm {
 			return true
 		}
-		for _, epRange := range season.Episodes {
-			if epRange == chapterRange {
+
+		// match individual episodes
+		for epRange := range season.EpisodeRange {
+			if shared.NormalizeDash(epRange) == norm {
 				return true
 			}
 		}
@@ -177,58 +193,45 @@ func HaveVideoStatus(chapterRange string) int {
 		return 0
 	}
 
-	LoadMetadataCache()
+	index := LoadMetadataCache()
 	cfg := shared.LoadConfig()
 	baseDir := cfg.TargetDir
 
-	targetStart, targetEnd := shared.ParseRange(chapterRange)
+	norm := shared.NormalizeDash(chapterRange)
+	targetStart, targetEnd := shared.ParseRange(norm)
 
 	totalRelevant := 0
 	totalFound := 0
 
-	for seasonKey, season := range metadataCache.Seasons {
+	for seasonKey, season := range index.Seasons {
 		seasonDir := filepath.Join(baseDir, seasonKey)
 
-		for epKey, epRange := range season.Episodes {
-			start, end := shared.ParseRange(epRange)
+		for epRange, epData := range season.EpisodeRange {
+			epStart, epEnd := shared.ParseRange(epRange)
 
-			if start >= targetStart && end <= targetEnd {
+			if epStart >= targetStart && epEnd <= targetEnd {
 				totalRelevant++
 
-				seasonNum := shared.ExtractSeasonNumberFromKey(epKey)
-				episodeNum := shared.ExtractEpisodeNumberFromKey(epKey)
-				expectedPrefix := fmt.Sprintf("One Pace - S%sE%s -", seasonNum, episodeNum)
+				videoPathMP4 := filepath.Join(seasonDir, epData.Title+".mp4")
+				videoPathMKV := filepath.Join(seasonDir, epData.Title+".mkv")
 
-				files, err := os.ReadDir(seasonDir)
-				if err != nil {
-					continue
-				}
-
-				for _, file := range files {
-					if file.IsDir() {
-						continue
-					}
-					name := file.Name()
-					if strings.HasPrefix(name, expectedPrefix) &&
-						(strings.HasSuffix(name, ".mkv") || strings.HasSuffix(name, ".mp4")) {
-						totalFound++
-						break
-					}
+				if shared.FileExists(videoPathMP4) || shared.FileExists(videoPathMKV) {
+					totalFound++
 				}
 			}
 		}
 	}
 
-	if totalRelevant == 0 {
-		return 0 // no metadata episodes found
+	switch {
+	case totalRelevant == 0:
+		return 0
+	case totalFound == 0:
+		return 0
+	case totalFound < totalRelevant:
+		return 1
+	default:
+		return 2
 	}
-	if totalFound == 0 {
-		return 0 // metadata found but no files
-	}
-	if totalFound < totalRelevant {
-		return 1 // partial match
-	}
-	return 2 // all matching episodes found
 }
 
 // more helpers
@@ -261,7 +264,7 @@ func calculateSeasonRanges(index *shared.MetadataIndex) {
 		}
 
 		min, max := 99999, -1
-		for _, cr := range sidx.Episodes {
+		for cr := range sidx.EpisodeRange {
 			start, end := shared.ParseRange(cr)
 			if start < min {
 				min = start
@@ -282,10 +285,6 @@ func isEpisodeNFO(filename string) bool {
 // important
 func extractEpisodeMetadata(data []byte) (string, string, string) {
 	return shared.ExtractXMLTag(data, "season"), shared.ExtractXMLTag(data, "episode"), shared.ExtractChapterRangeFromNFO(string(data))
-}
-
-func rangesOverlap(a1, a2, b1, b2 int) bool {
-	return a1 <= b2 && b1 <= a2
 }
 
 // copyDir copies all files from src to dst

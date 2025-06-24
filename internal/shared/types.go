@@ -11,15 +11,20 @@ type Config struct {
 	TorrentAPIURL string `json:"torrent_api_url"`
 }
 
-// MetadataIndex represents structured metadata for seasons and episodes.
+// Index maps seasons
 type MetadataIndex struct {
 	Seasons map[string]SeasonIndex `json:"seasons"`
 }
 
-// SeasonIndex represents episodes and their manga chapter ranges.
+// seasons maps episodes
 type SeasonIndex struct {
-	Range    string            `json:"range"`
-	Episodes map[string]string `json:"episodes"`
+	Range        string                 `json:"range"`
+	EpisodeRange map[string]EpisodeData `json:"episodes"`
+}
+
+// episodes maps titles and have
+type EpisodeData struct {
+	Title string `json:"title"`
 }
 
 // download struct

@@ -3,14 +3,11 @@ package torrent
 
 import (
 	"context"
-	"io"
 
 	"fmt"
-	"log"
 	"net/http"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
-	"opforjellyfin/internal/ui"
 	"os"
 	"path/filepath"
 
@@ -23,27 +20,10 @@ import (
 // used for writing to json-file for live tracking of concurrent background downloads. currently just saves progress
 
 // main torrent download and tracker
-func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string) (*shared.TorrentDownload, error) {
-	// init download obj
-
-	logWriter := log.Writer()
-	log.SetOutput(io.Discard)
-	defer log.SetOutput(logWriter)
-
-	dKey := ui.StyleFactory(fmt.Sprintf("%4d", entry.DownloadKey), ui.Style.Pink)
-	title := ui.StyleFactory(entry.TorrentName, ui.Style.LBlue)
-
-	td := &shared.TorrentDownload{
-		Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
-		TorrentID:    entry.TorrentID,
-		Started:      time.Now(),
-		OutDir:       outDir,
-		ChapterRange: entry.ChapterRange,
-	}
-	shared.SaveTorrentDownload(td)
+func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 
 	// get torrent meta-info
-	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().TorrentAPIURL, entry.TorrentID)
+	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().TorrentAPIURL, td.TorrentID)
 	logger.DebugLog(false, "Fetching torrent: %s, ID: %s", torrentURL, td)
 
 	// get metadata
@@ -51,20 +31,20 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.DebugLog(false, "HTTP request for metadata failed %s", td)
-		return cleanupWithError(td, err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	//build meta
 	meta, err := metainfo.Load(resp.Body)
 	if err != nil {
-		return cleanupWithError(td, err)
+		return err
 	}
 
 	// create tempdir
-	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", entry.TorrentID))
+	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		return cleanupWithError(td, err)
+		return err
 	}
 
 	// start the torrent-client
@@ -75,13 +55,13 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 
 	client, err := torrent.NewClient(cfg)
 	if err != nil {
-		return cleanupWithError(td, err)
+		return err
 	}
 
 	// add torrent
 	t, err := client.AddTorrent(meta)
 	if err != nil {
-		return cleanupWithError(td, err)
+		return err
 	}
 
 	// get torrent metadata
@@ -90,9 +70,9 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 		td.TotalSize = t.Length()
 		logger.DebugLog(false, "Torrent metadata loaded: %s", td)
 	case <-time.After(20 * time.Second):
-		return cleanupWithError(td, fmt.Errorf("timeout waiting for torrent info"))
+		return err
 	case <-ctx.Done():
-		return cleanupWithError(td, ctx.Err())
+		return ctx.Err()
 	}
 
 	// start download
@@ -105,7 +85,7 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 	for t.BytesMissing() > 0 {
 		select {
 		case <-ctx.Done():
-			return cleanupWithError(td, ctx.Err())
+			return ctx.Err()
 		case <-time.After(1 * time.Second):
 			td.Progress = t.BytesCompleted()
 			shared.SaveTorrentDownload(td)
@@ -115,25 +95,18 @@ func StartTorrent(ctx context.Context, entry shared.TorrentEntry, outDir string)
 	// close
 	td.Progress = td.TotalSize
 	logger.DebugLog(false, "Torrent contains %d files", len(t.Files()))
-	td.Done = true
 
 	closeWithLogs(client)
+	td.Done = true
+	td.ProgressMessage = "✅ Downloaded - Waiting to get placed.."
 
 	logger.DebugLog(false, "Download complete: %s", td)
 
-	return td, nil
+	return nil
 }
 
 // loghelper
 func closeWithLogs(client *torrent.Client) {
 	logger.DebugLog(false, "Torrentclient closed for: %s", client)
 	client.Close()
-}
-
-// removes and cleans up the torrent when an error is cast
-func cleanupWithError(td *shared.TorrentDownload, err error) (*shared.TorrentDownload, error) {
-	logger.DebugLog(false, "cleanupWithError called:", err)
-	td.Error = err.Error()
-
-	return td, err
 }

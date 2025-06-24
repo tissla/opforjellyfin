@@ -3,14 +3,21 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
-var debugEnabled bool = false
-var debugFile *os.File
+var (
+	debugEnabled bool
+	debugFile    *os.File
+	debugLogger  *log.Logger // logger used by all
+	logMu        sync.Mutex  // for the log-function
+)
 
+// always enabled
 func EnableDebugLogging() {
 	debugEnabled = true
 
@@ -21,25 +28,25 @@ func EnableDebugLogging() {
 	}
 
 	debugFile = f
-	log.SetOutput(f)
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	debugLogger = log.New(f, "", log.LstdFlags|log.Lshortfile)
 }
 
+// threadsafe logger
 func DebugLog(showUser bool, format string, args ...any) {
 	if showUser {
 		fmt.Printf(format+"\n", args...)
 	}
 
 	if debugEnabled && debugFile != nil {
-		log.SetOutput(debugFile)
-		log.Printf(format, args...)
+		logMu.Lock()
+		defer logMu.Unlock()
+
+		debugLogger.Printf(format, args...)
 	}
 }
 
+// shows entries in debug.log if there are any (n = number of lines)
 func ShowLogEntries(n int) {
-	if !debugEnabled {
-		return
-	}
 
 	data, err := os.ReadFile("debug.log")
 	if err != nil {
@@ -57,4 +64,16 @@ func ShowLogEntries(n int) {
 			fmt.Println(line)
 		}
 	}
+}
+
+// redirector
+type debugLogWriter struct{}
+
+func (w debugLogWriter) Write(p []byte) (n int, err error) {
+	DebugLog(false, "%s", strings.TrimSpace(string(p)))
+	return len(p), nil
+}
+
+func NewDebugLogWriter() io.Writer {
+	return debugLogWriter{}
 }

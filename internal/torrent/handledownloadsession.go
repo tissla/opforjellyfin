@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -17,18 +18,50 @@ import (
 func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 
 	// start downloads (with UIprogress)
-	allTDs, _ := StartDownloads(entries, outDir)
+	allTDs := []*shared.TorrentDownload{}
+	var wg sync.WaitGroup
 
+	for _, entry := range entries {
+
+		dKey := ui.StyleFactory(fmt.Sprintf("%4d", entry.DownloadKey), ui.Style.Pink)
+		title := ui.StyleFactory(entry.TorrentName, ui.Style.LBlue)
+
+		td := &shared.TorrentDownload{
+			Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
+			TorrentID:    entry.TorrentID,
+			Started:      time.Now(),
+			OutDir:       outDir,
+			ChapterRange: entry.ChapterRange,
+		}
+
+		shared.SaveTorrentDownload(td)
+		allTDs = append(allTDs, td)
+	}
+
+	//start ui
+	go ui.FollowProgress()
+
+	for i, entry := range entries {
+		wg.Add(1)
+		go func(i int, entry shared.TorrentEntry) {
+			defer wg.Done()
+			td := allTDs[i]
+			_ = StartTorrent(context.Background(), td)
+
+		}(i, entry)
+	}
+
+	wg.Wait()
 	// cool spinner
-	spinner := ui.NewSpinner(" 🗃️ Placing files", ui.Animations["MoviePlacement"])
+	//spinner := ui.NewSpinner(" 🗃️ Placing files", ui.Animations["MoviePlacement"])
 
 	// placing files
 	StartPlacement(allTDs, outDir)
 
 	// stop spinner
-	spinner.Stop()
+	//spinner.Stop()
 
-	// get placement data
+	// print placement data
 	for _, td := range allTDs {
 		if len(td.Messages) > 0 {
 			fmt.Printf("🎞️  %s\n", ansi.Truncate(td.Title, 36, ".."))
@@ -41,38 +74,6 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 	shared.ClearActiveDownloads()
 
 	fmt.Println("\n✅ All downloads finished.")
-}
-
-func StartDownloads(entries []shared.TorrentEntry, outDir string) ([]*shared.TorrentDownload, []error) {
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var allTDs []*shared.TorrentDownload
-	var allErrors []error
-
-	// start downloads one at a time
-	for _, e := range entries {
-		wg.Add(1)
-		go func(entry shared.TorrentEntry) {
-			defer wg.Done()
-			td, err := StartTorrent(context.Background(), entry, outDir)
-			mu.Lock()
-			defer mu.Unlock()
-			if err != nil {
-				allErrors = append(allErrors, fmt.Errorf("download %d (%s): %w", entry.DownloadKey, entry.TorrentName, err))
-				return
-			}
-			allTDs = append(allTDs, td)
-		}(e)
-	}
-
-	fmt.Println("🚀 Downloads started!")
-
-	//start ui
-	ui.FollowProgress()
-
-	wg.Wait()
-
-	return allTDs, allErrors
 }
 
 // sequential

@@ -69,15 +69,15 @@ func NewMultirowSpinner(frames []string, rows int) *Spinner {
 		for {
 			select {
 			case <-s.stop:
-				clearLines(rows + 1)
+				ClearLines(rows + 1)
 				s.done <- struct{}{}
 				return
 			default:
 				frame := frames[i%len(frames)]
 				frameLineCount := strings.Count(frame, "\n") + 1
-				clearLines(frameLineCount + 1)
+				ClearLines(frameLineCount + 1)
 
-				printMultiline("", frame)
+				PrintMultiline(frame)
 				time.Sleep(200 * time.Millisecond)
 				i++
 
@@ -86,23 +86,4 @@ func NewMultirowSpinner(frames []string, rows int) *Spinner {
 	}()
 
 	return s
-}
-
-// helper
-func printMultiline(message string, frame string) {
-	lines := strings.Split(frame, "\n")
-	fmt.Printf("%s", message)
-	for _, line := range lines {
-		fmt.Print(line + "\n")
-	}
-}
-
-// Clears n lines from current cursor pos upwards
-func clearLines(n int) {
-	for i := 0; i < n; i++ {
-		fmt.Print("\r\033[K") // Clear current line
-		if i < n-1 {
-			fmt.Print("\033[1A") // Move cursor up (except last line)
-		}
-	}
 }

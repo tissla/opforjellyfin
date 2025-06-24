@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"opforjellyfin/cmd"
@@ -13,14 +14,8 @@ import (
 )
 
 func main() {
-	shared.EnsureConfigExists()
 
-	for _, arg := range os.Args {
-		if arg == "--debug" {
-			logger.EnableDebugLogging()
-			break
-		}
-	}
+	shared.EnsureConfigExists()
 
 	root := cmd.RootCommand()
 
@@ -32,4 +27,9 @@ func main() {
 	); err != nil {
 		os.Exit(1)
 	}
+}
+
+// routes external loggers through debug log
+func init() {
+	log.SetOutput(logger.NewDebugLogWriter())
 }

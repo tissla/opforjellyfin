@@ -38,3 +38,14 @@ func Truncate(s string, n int) string {
 	}
 	return s
 }
+
+// used by Metadata.go
+func RangesOverlap(a1, a2, b1, b2 int) bool {
+	return a1 <= b2 && b1 <= a2
+}
+
+// file
+func FileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}

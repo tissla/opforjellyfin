@@ -4,10 +4,12 @@ package ui
 // 📁 🎞️ 🌐 🗃️ 🕵️ 🗄️
 
 // animation map
+// Spinners
 var Animations = map[string][]string{
 	"MoviePlacement": MoviePlacement,
 	"MetaFetcher":    MetaFetcher,
 	"Searcher":       Searcher,
+	"DownloadPrep":   DownloadPrep,
 }
 
 // cool animations
@@ -63,4 +65,16 @@ var Searcher = []string{
 	"     🗃️🗃️🗃️🗃️🗃️🗃️🗃️🗄️\n     🗄️🗄️🗃️🗃️🗃️🗃️🗃️🗄️\n     🗄️🗄️🗄️🗃️🗄️🗄️🕵️🗄️\n     🗄️🗄️🗄️🗃️🗃️🗃️🗃️🗄️",
 	"     🗃️🗃️🗃️🗃️🗃️🗃️🗃️🗄️\n     🗄️🗄️🗃️🗃️🗃️🗃️🗃️🗄️\n     🗄️🗄️🗄️🗃️🗄️🗄️🗃️🕵️\n     🗄️🗄️🗄️🗃️🗃️🗃️🗃️🗄️",
 	"     🗃️🗃️🗃️🗃️🗃️🗃️🗃️🗄️\n     🗄️🗄️🗃️🗃️🗃️🗃️🗃️🕵️\n     🗄️🗄️🗄️🗃️🗄️🗄️🗃️🗃️\n     🗄️🗄️🗄️🗃️🗃️🗃️🗃️🗄️",
+}
+
+var DownloadPrep = []string{
+	"   🧍       \n   🧍       \n   🚀       ",
+	"   🧍 🔧    \n   🧍       \n   🚀       ",
+	"   🧍 🔧    \n   🧍 🔍    \n   🚀       ",
+	"   🧍 🔧    \n   🧍 🔍    \n   🚀 💨    ",
+	"   🧍‍💻 🔧  \n   🧍 🔍    \n   🚀 💨💨  ",
+	"   🧍‍💻 🔧  \n   🧍 🔍 📋 \n   🚀 💨💨💨",
+	"   🧍‍💻 ✅  \n   🧍 ✅ 📋 \n   🚀 🔥💨💨",
+	"   🧍‍💻 ✅  \n   🧍 ✅ 📋 \n   🚀 🔥🔥💨",
+	"   🧍‍💻 👋  \n   🧍 👋 📋 \n   🚀 🔥🔥🔥",
 }

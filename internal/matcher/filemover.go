@@ -15,7 +15,7 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 
 	// collect all paths
 
-	td.ProgressMessage = fmt.Sprintf("Walking through directory %s", tmpDir)
+	td.ProgressMessage = fmt.Sprintf("🔧 Finding files to place %s", tmpDir)
 
 	var vidPaths []string
 	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
@@ -41,7 +41,8 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 		logger.DebugLog(false, "→ Found: %s", path)
 		filesChecked++
 
-		td.ProgressMessage = fmt.Sprintf("Placing.. %s", filepath.Base(path))
+		readablePath := filepath.Base(path)[10:]
+		td.ProgressMessage = fmt.Sprintf("🔧 Placing files.. %s", readablePath)
 
 		msg, err := MatchAndPlaceVideo(path, outDir, index)
 		if err != nil {
@@ -49,14 +50,12 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 			td.Error += fmt.Sprintf("%s\n", err)
 		} else if msg != "" {
 			filesPlaced++
-			td.ProgressMessage = msg
 			td.Messages = append(td.Messages, msg)
 			shared.SaveTorrentDownload(td)
 		}
 	}
 
-	td.Placed = true
-	shared.SaveTorrentDownload(td)
+	td.MarkPlaced("✅ Files placed!")
 
 	logger.DebugLog(false, "File placement done: %d checked, %d placed", filesChecked, filesPlaced)
 }

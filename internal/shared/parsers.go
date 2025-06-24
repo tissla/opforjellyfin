@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// strict version
-func ExtractChapterKeyFromTitle(title string) (string, error) {
+// strict version, used for torrents
+func ExtractChapterRangeFromTitle(title string) (string, error) {
 	re := regexp.MustCompile(`(?i)\[One Pace\]\[([^\]]+)\]`)
 	matches := re.FindStringSubmatch(title)
 	if len(matches) < 2 {

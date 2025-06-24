@@ -24,6 +24,10 @@ var downloadCmd = &cobra.Command{
 	Use:   "download <downloadKey> [downloadKey...]",
 	Short: "Download one or more One Pace torrents",
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// add spinner
+		spinner := ui.NewMultirowSpinner(ui.Animations["DownloadPrep"], 3)
+
 		if len(args) < 1 {
 			log.Fatalf("You must specify at least one downloadKey")
 		}
@@ -39,6 +43,8 @@ var downloadCmd = &cobra.Command{
 			log.Fatalf("❌ Failed to fetch torrents: %v", err)
 		}
 
+		// stop spinner
+		spinner.Stop()
 		var matches []shared.TorrentEntry
 		for _, arg := range args {
 			num, err := strconv.Atoi(arg)

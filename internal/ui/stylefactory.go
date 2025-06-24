@@ -87,13 +87,20 @@ func StyleByRange(input interface{}, min, max int) string {
 		Render(text)
 }
 
-// zebra lines
-func RenderRow(format string, isAlt bool, args ...interface{}) string {
+// get width func
+func GetTerminalWidth() int {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil || width <= 0 {
 		width = 80
 	}
 
+	return width
+}
+
+// zebra lines
+func RenderRow(format string, isAlt bool, args ...interface{}) string {
+
+	width := GetTerminalWidth()
 	row := fmt.Sprintf(format, args...)
 
 	// chatgpt hax solution

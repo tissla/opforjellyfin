@@ -7,7 +7,6 @@ import (
 	"opforjellyfin/internal/shared"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -23,16 +22,9 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 	logger.DebugLog(false, "Placing filename : %s", fileName)
 
 	// strict
-	chapterKey, err := shared.ExtractChapterKeyFromTitle(fileName)
+	dstPathNoSuffix := findMetadataMatch(fileName, index)
 
-	if err != nil {
-		return "", fmt.Errorf("matcher: could not extract manga chapter: %w", err)
-	}
-	logger.DebugLog(false, "chapterkey extracted: %s from %s", chapterKey, fileName)
-
-	dstPathNoSuffix := findMetadataMatch(chapterKey, index)
-
-	logger.DebugLog(false, "dstPath for chapterKey %s will be %s", chapterKey, dstPathNoSuffix)
+	logger.DebugLog(false, "dstPath for fileName %s will be %s", fileName, dstPathNoSuffix)
 
 	ext := filepath.Ext(fileName)
 	finalPath := dstPathNoSuffix + ext
@@ -47,20 +39,35 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 	//debug
 	logger.DebugLog(false, fmt.Sprintf("placed: %s → %s", fileName, relPath))
 
-	// truncate for outmessage
-	outFileName := ansi.Truncate(fileName, 36, "..")
-	outRelPath := ansi.Truncate(relPath, 36, "..")
+	// some formatting
+	fileNameNoPrefix := fileName[10:]
+	relPathNoPrefix := filepath.Base(relPath)[10:]
+	outFileName := ansi.Truncate(fileNameNoPrefix, 36, "..")
+	outRelPath := ansi.Truncate(".."+relPathNoPrefix, 36, "..")
 	msg := fmt.Sprintf("🎞️  Placed: %s → %s", outFileName, outRelPath)
 
 	return msg, nil
 }
 
 // returns directory to place file, without suffix
-func findMetadataMatch(chapterKey string, index *shared.MetadataIndex) string {
+func findMetadataMatch(fileName string, index *shared.MetadataIndex) string {
 
 	cfg := shared.LoadConfig()
 	baseDir := cfg.TargetDir
+
+	// moved this to findMetadataMatch to place file in strayfolder when no key can be found
+	chapterKey, err := shared.ExtractChapterRangeFromTitle(fileName)
+	if chapterKey == "" {
+		chapterKey = "unknown"
+	}
 	strayfolder := filepath.Join(baseDir, "strayvideos", chapterKey)
+
+	if err != nil {
+		logger.DebugLog(false, "findMetaDataMatch: could not extract manga chapter: %s", err)
+		return strayfolder
+	}
+
+	logger.DebugLog(false, "chapterkey extracted: %s from %s", chapterKey, fileName)
 
 	seasonFolder, seasonIndex := findSeasonForChapter(chapterKey, index)
 	if seasonFolder == "" {
@@ -68,42 +75,31 @@ func findMetadataMatch(chapterKey string, index *shared.MetadataIndex) string {
 		return strayfolder
 	}
 
-	episodeKey := findEpisodeKeyForChapter(chapterKey, seasonIndex)
-	if episodeKey == "" {
+	fileName = findTitleForChapter(chapterKey, seasonIndex)
+	if fileName == "" {
 		logger.DebugLog(false, "findMetaDataMatch: failed to find episode-key")
 		return strayfolder
 	}
 
-	logger.DebugLog(false, "EpisodeKey match found: ChapterKey: %s - EpisodeKey%s", chapterKey, episodeKey)
+	logger.DebugLog(false, "Title match found: ChapterKey: %s - EpisodeKey%s", chapterKey, fileName)
 
 	seasonDir := filepath.Join(baseDir, seasonFolder)
 
-	files, err := os.ReadDir(seasonDir)
-	if err != nil {
-		logger.DebugLog(false, "findMetaDataMatch: error reading season directory")
-		return strayfolder
-	}
+	fullPathNoSuffix := filepath.Join(seasonDir, fileName)
 
-	for _, f := range files {
-		if !f.IsDir() && strings.HasSuffix(f.Name(), ".nfo") && strings.Contains(f.Name(), episodeKey) {
-			filename := strings.TrimSuffix(f.Name(), ".nfo")
-			return filepath.Join(seasonDir, filename)
-		}
-	}
-
-	logger.DebugLog(false, "findMetaDataMatch: no match found, returning strayfolder")
-	return strayfolder
+	logger.DebugLog(false, "findMetaDataMatch: returning %s", fullPathNoSuffix)
+	return fullPathNoSuffix
 }
 
-// exact match
-func findEpisodeKeyForChapter(chapterKey string, sindex shared.SeasonIndex) string {
+// exact match, returns title
+func findTitleForChapter(chapterKey string, sindex shared.SeasonIndex) string {
 	normKey := shared.NormalizeDash(chapterKey)
 
-	logger.DebugLog(false, "findEpisodeKeyForChapter: chapterKey: %s - normKey: %s - sindex: %+v", chapterKey, normKey, sindex.Episodes)
+	logger.DebugLog(false, "findEpisodeKeyForChapter: chapterKey: %s - normKey: %s ", chapterKey, normKey)
 
-	for episodeKey, epRange := range sindex.Episodes {
+	for epRange, ep := range sindex.EpisodeRange {
 		if shared.NormalizeDash(epRange) == normKey {
-			return episodeKey
+			return ep.Title
 		}
 	}
 	return ""

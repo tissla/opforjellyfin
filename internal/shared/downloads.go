@@ -1,4 +1,4 @@
-// shared/active.go
+// shared/downloads.go
 
 package shared
 
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -29,6 +30,12 @@ func GetActiveDownloads() []*TorrentDownload {
 	for _, td := range activeDownloads {
 		list = append(list, td)
 	}
+
+	//make sure they come in the right order
+	sort.SliceStable(list, func(i, j int) bool {
+		return list[i].ChapterRange < list[j].ChapterRange
+	})
+
 	return list
 }
 
@@ -53,4 +60,11 @@ func CleanupTempDirs() error {
 		}
 	}
 	return nil
+}
+
+// helper
+func (td *TorrentDownload) MarkPlaced(msg string) {
+	td.ProgressMessage = msg
+	td.Placed = true
+	SaveTorrentDownload(td)
 }
