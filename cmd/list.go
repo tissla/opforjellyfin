@@ -29,7 +29,7 @@ var listCmd = &cobra.Command{
 
 		spinner := ui.NewMultirowSpinner(ui.Animations["Searcher"], 4)
 
-		allTorrents, err := scraper.FetchOnePaceTorrents()
+		allTorrents, err := scraper.FetchTorrents()
 		if err != nil {
 			fmt.Printf("❌ Error scraping torrents. Site inaccessible?: %v\n", err)
 			return

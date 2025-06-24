@@ -14,14 +14,17 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-// FetchOnePaceTorrents loads torrents from nyaa.si or configured tracker
-func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
+// FetchTorrents loads torrents from nyaa.si or configured tracker
+func FetchTorrents() ([]shared.TorrentEntry, error) {
+	//prep
 	cfg := shared.LoadConfig()
 	baseURL := strings.TrimRight(cfg.TorrentAPIURL, "/")
 	var rawEntries []shared.TorrentEntry
 
 	page := 1
 	for {
+
+		//nyaa specific
 		searchURL := fmt.Sprintf("%s/?f=0&c=1_2&q=one+pace&p=%d", baseURL, page)
 		resp, err := http.Get(searchURL)
 		if err != nil {
@@ -43,6 +46,8 @@ func FetchOnePaceTorrents() ([]shared.TorrentEntry, error) {
 			break //donesies
 		}
 
+		// nyaa-structure.
+		//TODO: add switch case to support other table structs
 		rows.Each(func(i int, s *goquery.Selection) {
 			title := s.Find("td:nth-child(2) a").Last().Text()
 			seedersStr := s.Find("td:nth-child(6)").Text()

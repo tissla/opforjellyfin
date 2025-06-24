@@ -39,7 +39,7 @@ var downloadCmd = &cobra.Command{
 			return
 		}
 
-		torrentList, err := scraper.FetchOnePaceTorrents()
+		torrentList, err := scraper.FetchTorrents()
 		if err != nil {
 			logger.DebugLog(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
 			return
