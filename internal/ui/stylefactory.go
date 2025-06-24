@@ -143,9 +143,13 @@ func RenderRow(format string, isAlt bool, args ...interface{}) string {
 	return final
 }
 
-// AnsiPadLeft pads text with spaces on the left
-func AnsiPadLeft(text string, width int) string {
-	trunc := ansi.Truncate(text, width, "")
+// AnsiPadLeft pads text with chosen filler on the left
+func AnsiPadLeft(text string, width int, taila ...string) string {
+	tail := ""
+	if len(taila) > 0 {
+		tail = taila[0]
+	}
+	trunc := ansi.Truncate(text, width, tail)
 	visible := runewidth.StringWidth(ansi.Strip(trunc))
 	if visible < width {
 		padding := strings.Repeat(" ", width-visible)
@@ -154,9 +158,13 @@ func AnsiPadLeft(text string, width int) string {
 	return trunc
 }
 
-// AnsiPadsRight pads text with spaces on the right
-func AnsiPadRight(text string, width int) string {
-	trunc := ansi.Truncate(text, width, "")
+// AnsiPadsRight pads text with chosen filler on the right
+func AnsiPadRight(text string, width int, taila ...string) string {
+	tail := ""
+	if len(taila) > 0 {
+		tail = taila[0]
+	}
+	trunc := ansi.Truncate(text, width, tail)
 	visible := runewidth.StringWidth(trunc)
 	if visible < width {
 		trunc += strings.Repeat(" ", width-visible)

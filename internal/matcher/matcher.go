@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
+	"opforjellyfin/internal/ui"
 	"os"
 	"path/filepath"
-
-	"github.com/charmbracelet/x/ansi"
 )
 
 // Matches video-file to metadata, then places it
@@ -43,8 +42,8 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 	// some formatting
 	fileNameNoPrefix := fileName[10:]
 	relPathNoPrefix := filepath.Base(relPath)[10:]
-	outFileName := ansi.Truncate(fileNameNoPrefix, 26, "..")
-	outRelPath := ansi.Truncate(".."+relPathNoPrefix, 36, "..")
+	outFileName := ui.AnsiPadRight(fileNameNoPrefix, 26, "..")
+	outRelPath := ui.AnsiPadRight(".."+relPathNoPrefix, 36, "..")
 	msg := fmt.Sprintf("🎞️  Placed: %s → %s", outFileName, outRelPath)
 
 	return msg, nil

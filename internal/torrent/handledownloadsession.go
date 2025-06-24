@@ -12,8 +12,6 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/charmbracelet/x/ansi"
 )
 
 func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
@@ -65,7 +63,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 	// print placement data
 	for _, td := range allTDs {
 		if len(td.Messages) > 0 {
-			fmt.Printf("🎞️  %s\n", ansi.Truncate(td.Title, 36, ".."))
+			fmt.Printf("🎞️  %s\n", ui.AnsiPadRight(td.Title, 36, ".."))
 			for _, line := range td.Messages {
 				fmt.Printf("   → %s\n", line)
 			}
