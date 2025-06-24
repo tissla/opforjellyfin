@@ -68,9 +68,9 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 	}
 
 	spinner.Stop()
-	path := filepath.Join(baseDir, "metadata-index.json")
 
-	fmt.Println("✅ Metadata index written to", path)
+	path := filepath.Join(baseDir, "metadata-index.json")
+	fmt.Println("\n✅ Saved metadata index to", path)
 
 	fmt.Println("✅ Metadata fetch and indexing complete.")
 	return nil
@@ -155,7 +155,6 @@ func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 		return fmt.Errorf("could not encode metadata index: %w", err)
 	}
 
-	fmt.Println("✅ Saved metadata index at", path)
 	metadataCache = index // cache immediately after saving
 
 	return nil

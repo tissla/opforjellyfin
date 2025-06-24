@@ -26,7 +26,7 @@ var downloadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// add spinner
-		spinner := ui.NewMultirowSpinner(ui.Animations["DownloadPrep"], 3)
+		spinner := ui.NewSpinner("🗃️ Preparing download.. ", ui.Animations["MetaFetcher"])
 
 		if len(args) < 1 {
 			logger.DebugLog(true, "⚠️ You must specify atleast one download-key")

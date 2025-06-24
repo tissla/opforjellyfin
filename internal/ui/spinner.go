@@ -42,11 +42,7 @@ func NewSpinner(message string, frames []string) *Spinner {
 func (s *Spinner) Stop() {
 	close(s.stop)
 	<-s.done
-	fmt.Print("\r" + blankLine(40) + "\r\n")
-}
-
-func blankLine(width int) string {
-	return fmt.Sprintf("%-*s", width, "")
+	ClearLines(1)
 }
 
 // Creates a multi-row spinner, AnimationFreames, Number of rows,

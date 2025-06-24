@@ -57,6 +57,7 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 		}
 	}
 
+	// placed
 	placedMsg := fmt.Sprintf("✅ %d file placed!", filesPlaced)
 	if filesPlaced > 1 {
 		placedMsg = fmt.Sprintf("✅ %d/%d files placed!", filesPlaced, len(vidPaths))

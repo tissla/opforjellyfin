@@ -27,11 +27,6 @@ func FollowProgress() {
 			downloads := shared.GetActiveDownloads()
 			num := len(downloads)
 
-			if len(downloads) == 0 {
-				fmt.Println("📭 No active downloads.")
-				return
-			}
-
 			// print initial lines
 			if first {
 				for i := 0; i < num+1; i++ {
