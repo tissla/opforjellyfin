@@ -143,7 +143,7 @@ func renderVerboseRow(t shared.TorrentEntry) {
 	fullTitle := ui.AnsiPadRight(t.Title, 60)
 
 	row := ui.RenderRow(
-		"%s - %s: %s H:%s M:%s | %3d seeders",
+		"%s - %s: %s H:%s M:%s | %s seeders",
 		alternate,
 		ui.StyleFactory("DKEY", ui.Style.LBlue),
 		ui.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), ui.Style.Pink),
