@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/scraper"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
@@ -31,7 +32,7 @@ var listCmd = &cobra.Command{
 
 		allTorrents, err := scraper.FetchTorrents()
 		if err != nil {
-			fmt.Printf("❌ Error scraping torrents. Site inaccessible?: %v\n", err)
+			logger.DebugLog(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
 			return
 		}
 

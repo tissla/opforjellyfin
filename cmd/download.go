@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	//follow   bool
 	quality  string
 	forceKey string
 )

@@ -11,12 +11,12 @@ import (
 
 var clearCmd = &cobra.Command{
 	Use:   "clear",
-	Short: "Clear all active downloads and temporary files",
+	Short: "Clear all temporary files, in case something stuck",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		shared.ClearActiveDownloads()
 
-		fmt.Println("✅ Cleared active downloads and temporary files.")
+		fmt.Println("✅ Cleared temporary files.")
 	},
 }
 

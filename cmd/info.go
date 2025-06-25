@@ -16,6 +16,12 @@ import (
 
 var verboseInfo bool
 
+type season struct {
+	sNum      int
+	videos    int
+	totalnfos int
+}
+
 var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Show current configuration and library status",
@@ -40,10 +46,6 @@ var infoCmd = &cobra.Command{
 			fmt.Printf("🐙 Metadata Source:  https://github.com/%s\n", cfg.GitHubRepo)
 		}
 
-		type season struct {
-			sNum  int
-			label string
-		}
 		var seasonFolders []season
 
 		for _, f := range files {
@@ -51,21 +53,23 @@ var infoCmd = &cobra.Command{
 				continue
 			}
 
+			if f.Name() == "strayvideos" {
+				continue
+			}
+
 			subdir := filepath.Join(cfg.TargetDir, f.Name())
 
 			v, nfo := metadata.CountVideosAndTotal(subdir)
-			if v != 0 {
-				extNum := shared.ExtractSeasonNumber(f.Name())
-				sNum, _ := strconv.Atoi(extNum)
 
-				dNum := ui.AnsiPadLeft(ui.StyleFactory(extNum, ui.Style.Pink), 3)
-				sLabel := fmt.Sprintf("Season %s: %d/%d", dNum, v, nfo)
-				seasonFolders = append(seasonFolders, season{
-					sNum:  sNum,
-					label: sLabel,
-				})
+			extNum := shared.ExtractSeasonNumber(f.Name())
+			sNum, _ := strconv.Atoi(extNum)
 
-			}
+			seasonFolders = append(seasonFolders, season{
+				sNum:      sNum,
+				videos:    v,
+				totalnfos: nfo,
+			})
+
 		}
 
 		sort.Slice(seasonFolders, func(i, j int) bool {
@@ -74,13 +78,29 @@ var infoCmd = &cobra.Command{
 
 		fmt.Printf("📦 Seasons Downloaded: %d\n", len(seasonFolders))
 
-		if len(seasonFolders) > 0 {
-			fmt.Println("\n📁 Season folders:")
-			for _, s := range seasonFolders {
-				fmt.Printf("   - %s\n", s.label)
-			}
+		fmt.Println("\n📁 Season folders:")
+		for _, s := range seasonFolders {
+			formattedPrint := styleSeasonPrint(s)
+			fmt.Printf("   - %s\n", formattedPrint)
 		}
+
 	},
+}
+
+func styleSeasonPrint(s season) string {
+
+	vids := ui.AnsiPadLeft(ui.StyleByRange(s.videos, 0, s.totalnfos), 4)
+	nfos := ui.AnsiPadRight(ui.StyleByRange(s.totalnfos, 0, s.totalnfos), 4)
+
+	stringnum := fmt.Sprintf("%d", s.sNum)
+	snum := ui.AnsiPadLeft(ui.StyleFactory(stringnum, ui.Style.Pink), 3)
+
+	if s.sNum == 0 {
+		return fmt.Sprintf("Specials  : %s / %s", vids, nfos)
+	}
+
+	return fmt.Sprintf("Season %s: %s / %s", snum, vids, nfos)
+
 }
 
 func init() {
