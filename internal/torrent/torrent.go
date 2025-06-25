@@ -98,7 +98,7 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 
 	closeWithLogs(client)
 	td.Done = true
-	td.ProgressMessage = "⏳ Waiting to place.."
+	td.PlacementProgress = "⏳ Waiting to place.."
 	shared.SaveTorrentDownload(td)
 	logger.DebugLog(false, "Download complete: %s", td)
 

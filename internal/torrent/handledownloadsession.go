@@ -28,8 +28,8 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 		td := &shared.TorrentDownload{
 			Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
 			TorrentID:    entry.TorrentID,
+			FullTitle:    entry.Title,
 			Started:      time.Now(),
-			OutDir:       outDir,
 			ChapterRange: entry.ChapterRange,
 		}
 
@@ -62,9 +62,9 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 
 	// print placement data
 	for _, td := range allTDs {
-		if len(td.Messages) > 0 {
+		if len(td.PlacementFull) > 0 {
 			fmt.Printf("🎞️  %s\n", ui.AnsiPadRight(td.Title, 36, ".."))
-			for _, line := range td.Messages {
+			for _, line := range td.PlacementFull {
 				fmt.Printf("   → %s\n", line)
 			}
 		}

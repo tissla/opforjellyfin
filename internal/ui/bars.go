@@ -92,7 +92,7 @@ func renderAllBars(downloads []*shared.TorrentDownload) {
 	allbars := ""
 	for _, td := range downloads {
 
-		bar := renderSingleBar(td.Title, td.ProgressMessage, td.Progress, td.TotalSize, 15, 40)
+		bar := renderSingleBar(td.Title, td.PlacementProgress, td.Progress, td.TotalSize, 15, 40)
 		allbars = allbars + bar + "\n"
 	}
 	PrintMultiline(allbars)

@@ -70,7 +70,7 @@ func CleanupTempDirs() error {
 
 // helper
 func (td *TorrentDownload) MarkPlaced(msg string) {
-	td.ProgressMessage = msg
+	td.PlacementProgress = msg
 	td.Placed = true
 	SaveTorrentDownload(td)
 }

@@ -29,31 +29,30 @@ type EpisodeData struct {
 
 // download struct
 type TorrentDownload struct {
-	Title           string
-	TorrentID       int
-	Started         time.Time
-	OutDir          string
-	Progress        int64    // used by ui
-	TotalSize       int64    // used by ui
-	Messages        []string // used
-	Error           string   // stores specific torrent errors
-	ChapterRange    string
-	ProgressMessage string //used for placement messages after download is done
-	Done            bool   // set to true when torrent is downloaded
-	Placed          bool   // set to true when files are placed, before clearing active downloads
+	Title             string    // title for display
+	FullTitle         string    // full torrent title
+	TorrentID         int       // torrentID for tempdir
+	ChapterRange      string    // Main
+	Started           time.Time // time torrent started (unused?)
+	Progress          int64     // used by ui progressbar
+	TotalSize         int64     // used by ui progress bar
+	PlacementFull     []string  // used to display placed messages after all placements are done
+	PlacementProgress string    //used for placement messages after download is done
+	Done              bool      // set to true when torrent is downloaded
+	Placed            bool      // set to true when files are placed, before clearing active downloads
 }
 
 // entry for dl
 type TorrentEntry struct {
-	Title         string
-	Quality       string
-	DownloadKey   int
-	TorrentName   string
-	Seeders       int
-	RawIndex      int // RawIndex is based on ChapterRange, used for placement
-	TorrentLink   string
-	TorrentID     int
-	ChapterRange  string
+	Title         string // full title
+	Quality       string // parsed quality
+	DownloadKey   int    // download key set by rawIndex
+	TorrentName   string // for display
+	Seeders       int    // number of seeders
+	RawIndex      int    // RawIndex is based on ChapterRange, used for placement
+	TorrentLink   string // torrent link
+	TorrentID     int    // torrent ID, extracted from link
+	ChapterRange  string // torrent chapter range
 	MetaDataAvail bool
 	IsSpecial     bool
 	HaveIt        int

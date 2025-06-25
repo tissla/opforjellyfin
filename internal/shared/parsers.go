@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+func IsEpisodeNFO(filename string) bool {
+	return strings.HasSuffix(filename, ".nfo") && !strings.Contains(filename, "season") && !strings.Contains(filename, "tvshow")
+}
+
 // strict version, used for torrents. Tries to extract Chapter Range from a string [One Pace] [x-y* returns x-y
 func ExtractChapterRangeFromTitle(title string) string {
 	re := regexp.MustCompile(`(?i)\[One Pace\]\[([^\]]+)\]`)
@@ -97,6 +101,25 @@ func ExtractSeasonNumberFromKey(episodeKey string) string {
 		return matches[1]
 	}
 	return "00"
+}
+
+// rough extract whatver number comes after "Chapter" or "Episode", returns true if it can be interpreted as a ChapterRange-key
+func RoughExtractChapterFromTitle(title string) (string, bool) {
+	// Match range like "Chapter 10-12" or "Episodes 15-17"
+	reRange := regexp.MustCompile(`(?i)(Chapters?|Episodes?)\s*(\d+)\s*-\s*(\d+)`)
+	if matches := reRange.FindStringSubmatch(title); len(matches) == 4 {
+		start := matches[2]
+		end := matches[3]
+		return start + "-" + end, true
+	}
+
+	// Match single number
+	reSingle := regexp.MustCompile(`(?i)(Chapters?|Episodes?)\s*(\d+)\b`)
+	if matches := reSingle.FindStringSubmatch(title); len(matches) == 3 {
+		return matches[2], false
+	}
+
+	return "00", false
 }
 
 // sometimes the dash is wrong

@@ -14,7 +14,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-// FetchTorrents loads torrents from nyaa.si or configured tracker
+// TODO: sort file, add more structs, add scrape-map
+
+// FetchTorrents loads torrents from nyaa.si
 func FetchTorrents() ([]shared.TorrentEntry, error) {
 	//prep
 	cfg := shared.LoadConfig()
@@ -125,11 +127,6 @@ func parseQuality(title string) string {
 	case strings.Contains(title, "480p"):
 		return "480p"
 	default:
-		re := regexp.MustCompile(`\b\d{3,}p\b`) // try to find other quality yankily
-		match := re.FindString(title)
-		if match != "" {
-			return match
-		}
 		return "n/a"
 	}
 }

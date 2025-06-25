@@ -39,7 +39,7 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	repo := fmt.Sprintf("https://github.com/%s.git", cfg.GitHubRepo)
 
-	fmt.Printf("🌐 Fetching metadata from " + repo + "\n")
+	fmt.Printf("%s", "🌐 Fetching metadata from "+repo+"\n")
 
 	spinner := ui.NewSpinner("🗃️ Downloading.. ", ui.Animations["MetaFetcher"])
 
@@ -92,7 +92,7 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 	}
 
 	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !isEpisodeNFO(d.Name()) {
+		if err != nil || d.IsDir() || !shared.IsEpisodeNFO(d.Name()) {
 			return nil
 		}
 
@@ -275,10 +275,6 @@ func calculateSeasonRanges(index *shared.MetadataIndex) {
 		sidx.Range = fmt.Sprintf("%d-%d", min, max)
 		index.Seasons[skey] = sidx
 	}
-}
-
-func isEpisodeNFO(filename string) bool {
-	return strings.HasSuffix(filename, ".nfo") && !strings.Contains(filename, "season") && !strings.Contains(filename, "tvshow")
 }
 
 // important

@@ -8,6 +8,7 @@ import (
 	"opforjellyfin/internal/ui"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Matches video-file to metadata, then places it
@@ -26,6 +27,7 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 
 	logger.DebugLog(false, "dstPath for fileName %s will be %s", fileName, dstPathNoSuffix)
 
+	// extract suffix from original file
 	ext := filepath.Ext(fileName)
 	finalPath := dstPathNoSuffix + ext
 
@@ -37,7 +39,7 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 	//relative path for logs
 	relPath, _ := filepath.Rel(defaultDir, finalPath)
 	//debug
-	logger.DebugLog(false, fmt.Sprintf("placed: %s → %s", fileName, relPath))
+	logger.DebugLog(false, "%s", fmt.Sprintf("placed: %s → %s", fileName, relPath))
 
 	// some formatting
 	fileNameNoPrefix := fileName[10:]
@@ -56,7 +58,7 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 	baseDir := cfg.TargetDir
 
 	// strayfolder for unmatched videos
-	strayfolder := filepath.Join(baseDir, "strayvideos", ogcr)
+	strayfolder := filepath.Join(baseDir, "strayvideos", ogcr, fileName)
 	// finds season containing chapterRange, returns the seasonFolderName and seasonIndex
 	// uses ogcr to find correct season even if its a bundle
 	seasonFolderName, seasonIndex := findSeasonForChapter(ogcr, index)
@@ -72,8 +74,22 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 		// if first fails, extract specific chapterRange from fileName
 		chapterRange := shared.ExtractChapterRangeFromTitle(fileName)
 		if chapterRange == "" {
+			// use ogcr + file regex
 			// if this extraction fails, try rougher methods
-			// TODO: implement these rougher methods
+			seasonZ := shared.ExtractSeasonNumber(seasonFolderName)
+			seasonNum := fmt.Sprintf("%02s", seasonZ)
+
+			// rough extract can find chapterRange or rough chapter(in relation to season) if lucky.
+			chapterNum, isRange := shared.RoughExtractChapterFromTitle(fileName)
+			logger.DebugLog(false, "findMetaDataMatch - rough extracted chapterNum: %s", chapterNum)
+
+			if isRange {
+				newFileName = findTitleForChapter(chapterNum, seasonIndex)
+			} else {
+				// build a matching string from season and rough chapter, eg: seasonNum = 3 and chapternum = 05 => S03E05
+				epKey := fmt.Sprintf("S%sE%s", seasonNum, chapterNum)
+				newFileName = findTitleRough(epKey, seasonIndex)
+			}
 		} else {
 			// if extraction succeeded, find title from chapterRange
 			newFileName = findTitleForChapter(chapterRange, seasonIndex)
@@ -124,4 +140,18 @@ func findSeasonForChapter(chapterKey string, index *shared.MetadataIndex) (strin
 
 	return "", shared.SeasonIndex{}
 
+}
+
+// rough finder
+func findTitleRough(epKey string, sindex shared.SeasonIndex) string {
+
+	for _, ep := range sindex.EpisodeRange {
+		if strings.Contains(ep.Title, epKey) {
+			logger.DebugLog(false, "roughFindTitle match found: %s > %s", epKey, ep.Title)
+			return ep.Title
+		}
+	}
+
+	logger.DebugLog(false, "roughFindTitle did not find a match. for %s", epKey)
+	return ""
 }
