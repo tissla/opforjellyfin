@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-func FollowProgress() {
+func FollowProgress(doneChan chan struct{}) {
 
 	first := true
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(300 * time.Millisecond)
 	defer ticker.Stop()
 
 	// ctrl+C cancels bars, wont cancel downloads tho
@@ -38,22 +38,18 @@ func FollowProgress() {
 			// +1 for the marker, +1 for the trailing \n in renderAllBars
 			ClearLines(num + 2)
 
-			allDone := true
-			for _, td := range downloads {
-				if !td.Placed {
-					allDone = false
-					break
-				}
-			}
-			if allDone {
-				logger.DebugLog(false, "ALLDONE! RENDERING ALL BARS")
-				renderAllBars(downloads)
-				return
-			}
-
 			// render current status
 			renderAllBars(downloads)
+		case <-doneChan:
+			downloads := shared.GetActiveDownloads()
+			num := len(downloads)
+			ClearLines(num + 2)
+			renderAllBars(downloads)
+			logger.DebugLog(false, "ALLDONE! UI shutting down.")
 
+			// callback wedone
+			doneChan <- struct{}{}
+			return
 		case <-signalChan:
 			fmt.Println("\n🛑 Cancelled by user.")
 			return

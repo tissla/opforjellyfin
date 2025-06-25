@@ -38,7 +38,8 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 	}
 
 	//start ui
-	go ui.FollowProgress()
+	doneChan := make(chan struct{})
+	go ui.FollowProgress(doneChan)
 
 	for i, entry := range entries {
 		wg.Add(1)
@@ -59,6 +60,11 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 
 	// stop spinner
 	//spinner.Stop()
+	// tell UI we done
+	doneChan <- struct{}{}
+
+	// wait for UI to be done
+	<-doneChan
 
 	// print placement data
 	for _, td := range allTDs {

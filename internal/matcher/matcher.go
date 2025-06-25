@@ -31,7 +31,7 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 	ext := filepath.Ext(fileName)
 	finalPath := dstPathNoSuffix + ext
 
-	if err := SafeMoveFile(videoPath, finalPath); err != nil {
+	if err := shared.SafeMoveFile(videoPath, finalPath); err != nil {
 		logger.DebugLog(false, "sfm Error: %s", err)
 		return "", err
 	}
