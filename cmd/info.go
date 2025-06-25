@@ -3,13 +3,13 @@ package cmd
 
 import (
 	"fmt"
+	"opforjellyfin/internal/metadata"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -53,7 +53,7 @@ var infoCmd = &cobra.Command{
 
 			subdir := filepath.Join(cfg.TargetDir, f.Name())
 
-			v, nfo := CountVideosAndTotal(subdir)
+			v, nfo := metadata.CountVideosAndTotal(subdir)
 			if v != 0 {
 				extNum := shared.ExtractSeasonNumber(f.Name())
 				sNum, _ := strconv.Atoi(extNum)
@@ -81,50 +81,6 @@ var infoCmd = &cobra.Command{
 			}
 		}
 	},
-}
-
-// move this
-// counts videos that match with .nfo files. returns: matching videos, total .nfo files (excluding season.nfo)
-func CountVideosAndTotal(dir string) (matched int, totalNFO int) {
-	videoFiles := map[string]bool{}
-
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		lower := strings.ToLower(d.Name())
-		base := strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
-
-		if strings.HasSuffix(lower, ".mkv") || strings.HasSuffix(lower, ".mp4") {
-			videoFiles[base] = false
-		}
-
-		if shared.IsEpisodeNFO(lower) {
-			totalNFO++
-			if _, exists := videoFiles[base]; exists {
-				videoFiles[base] = true //
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return 0, 0
-	}
-
-	// count matched
-	for _, matchedFlag := range videoFiles {
-		if matchedFlag {
-			matched++
-		}
-	}
-
-	return matched, totalNFO
 }
 
 func init() {

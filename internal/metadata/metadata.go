@@ -196,41 +196,31 @@ func HaveVideoStatus(chapterRange string) int {
 	cfg := shared.LoadConfig()
 	baseDir := cfg.TargetDir
 
-	norm := shared.NormalizeDash(chapterRange)
-	targetStart, targetEnd := shared.ParseRange(norm)
-
-	totalRelevant := 0
-	totalFound := 0
-
 	for seasonKey, season := range index.Seasons {
 		seasonDir := filepath.Join(baseDir, seasonKey)
 
+		if seasonKey == chapterRange {
+			v, n := CountVideosAndTotal(seasonDir)
+			if v < n {
+				return 0
+			}
+			return 1
+		}
+
 		for epRange, epData := range season.EpisodeRange {
-			epStart, epEnd := shared.ParseRange(epRange)
-
-			if epStart >= targetStart && epEnd <= targetEnd {
-				totalRelevant++
-
+			if epRange == chapterRange {
 				videoPathMP4 := filepath.Join(seasonDir, epData.Title+".mp4")
 				videoPathMKV := filepath.Join(seasonDir, epData.Title+".mkv")
 
 				if shared.FileExists(videoPathMP4) || shared.FileExists(videoPathMKV) {
-					totalFound++
+					return 2
 				}
 			}
+
 		}
 	}
 
-	switch {
-	case totalRelevant == 0:
-		return 0
-	case totalFound == 0:
-		return 0
-	case totalFound < totalRelevant:
-		return 1
-	default:
-		return 2
-	}
+	return 0
 }
 
 // more helpers
@@ -332,4 +322,47 @@ func syncDir(src, dst string) error {
 
 		return shared.CopyFile(path, destPath, info.Mode())
 	})
+}
+
+// video and .nfo file counter. Returns: number of videos matched with episode .nfo file, number of episode .nfo files
+func CountVideosAndTotal(dir string) (matched int, totalNFO int) {
+	videoFiles := map[string]bool{}
+
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		lower := strings.ToLower(d.Name())
+		base := strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
+
+		if strings.HasSuffix(lower, ".mkv") || strings.HasSuffix(lower, ".mp4") {
+			videoFiles[base] = false
+		}
+
+		if shared.IsEpisodeNFO(lower) {
+			totalNFO++
+			if _, exists := videoFiles[base]; exists {
+				videoFiles[base] = true //
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, 0
+	}
+
+	// count matched
+	for _, matchedFlag := range videoFiles {
+		if matchedFlag {
+			matched++
+		}
+	}
+
+	return matched, totalNFO
 }

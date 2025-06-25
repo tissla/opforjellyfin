@@ -59,17 +59,20 @@ func ExtractXMLTag(data []byte, tag string) string {
 	return ""
 }
 
-// gets chapter range from .nfo file. e.g "Manga Chapter(s): 8-11" -> "8-11" or "Manga Chapter(s): 1" -> "1"
+// gets chapter range from .nfo file. e.g "Manga Chapter(s): 8-11" -> "8-11" or "Manga Chapter(s): 1" -> "1-1" or "Manga Chapter(s): 1, 5" -> "1-1"
 func ExtractChapterRangeFromNFO(content string) string {
-	re := regexp.MustCompile(`(?i)Manga\s*Chapter\(s\)?:\s*(\d+)(?:[\s,-]*(\d+))?`)
+	re := regexp.MustCompile(`(?i)Manga\s*Chapter\(s\)?:\s*([\d]+(?:\s*-\s*[\d]+)?)`)
 	match := re.FindStringSubmatch(content)
 	if len(match) >= 2 {
-		start := match[1]
-		end := match[2]
-		if end == "" {
-			end = start
+		rangeStr := strings.ReplaceAll(match[1], " ", "")
+		if strings.Contains(rangeStr, "-") {
+			parts := strings.Split(rangeStr, "-")
+			if len(parts) == 2 {
+				return fmt.Sprintf("%s-%s", parts[0], parts[1])
+			}
 		}
-		return fmt.Sprintf("%s-%s", start, end)
+		// Single number fallback
+		return fmt.Sprintf("%s-%s", rangeStr, rangeStr)
 	}
 	return ""
 }
