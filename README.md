@@ -40,18 +40,20 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
    ![Info](img/example4.png)
 
+5. And much more!
+
 ## 🚀 Installation
 
 1. **Install Go** (version ≥ 1.23)
 
-1. Clone repo:
+2. Clone repo:
 
    ```bash
    git clone https://github.com/tissla/opforjellyfin.git
    cd opforjellyfin
    ```
 
-1. Build binary:
+3. Build binary:
 
    ```bash
    go build -o opfor
