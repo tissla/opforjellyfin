@@ -18,28 +18,28 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 		return "", nil
 	}
 
-	logger.DebugLog(false, "Checking if video file exists: %s", videoPath)
+	logger.Log(false, "Checking if video file exists: %s", videoPath)
 	fileName := filepath.Base(videoPath)
-	logger.DebugLog(false, "Placing filename : %s", fileName)
+	logger.Log(false, "Placing filename : %s", fileName)
 
 	// strict
 	dstPathNoSuffix := findMetadataMatch(fileName, index, ogcr)
 
-	logger.DebugLog(false, "dstPath for fileName %s will be %s", fileName, dstPathNoSuffix)
+	logger.Log(false, "dstPath for fileName %s will be %s", fileName, dstPathNoSuffix)
 
 	// extract suffix from original file
 	ext := filepath.Ext(fileName)
 	finalPath := dstPathNoSuffix + ext
 
 	if err := shared.SafeMoveFile(videoPath, finalPath); err != nil {
-		logger.DebugLog(false, "sfm Error: %s", err)
+		logger.Log(false, "sfm Error: %s", err)
 		return "", err
 	}
 
 	//relative path for logs
 	relPath, _ := filepath.Rel(defaultDir, finalPath)
 	//debug
-	logger.DebugLog(false, "%s", fmt.Sprintf("placed: %s → %s", fileName, relPath))
+	logger.Log(false, "%s", fmt.Sprintf("placed: %s → %s", fileName, relPath))
 
 	// some formatting
 	fileNameNoPrefix := fileName[10:]
@@ -63,10 +63,10 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 	// uses ogcr to find correct season even if its a bundle
 	seasonFolderName, seasonIndex := findSeasonForChapter(ogcr, index)
 	if seasonFolderName == "" {
-		logger.DebugLog(false, "findMetaDataMatch: failed to find Season-folder")
+		logger.Log(false, "findMetaDataMatch: failed to find Season-folder")
 		return strayfolder
 	}
-	logger.DebugLog(false, "season found for: %s for range %s", seasonFolderName, ogcr)
+	logger.Log(false, "season found for: %s for range %s", seasonFolderName, ogcr)
 
 	// searches the seasonIndex for matching title for chapterRange, tries ogcr first for single-episode seasons
 	newFileName := findTitleForChapter(ogcr, seasonIndex)
@@ -81,7 +81,7 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 
 			// rough extract can find chapterRange or rough chapter(in relation to season) if lucky.
 			chapterNum, isRange := shared.RoughExtractChapterFromTitle(fileName)
-			logger.DebugLog(false, "findMetaDataMatch - rough extracted chapterNum: %s", chapterNum)
+			logger.Log(false, "findMetaDataMatch - rough extracted chapterNum: %s", chapterNum)
 
 			if isRange {
 				newFileName = findTitleForChapter(chapterNum, seasonIndex)
@@ -95,18 +95,18 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 			newFileName = findTitleForChapter(chapterRange, seasonIndex)
 		}
 	} else {
-		logger.DebugLog(false, "Title match found: ChapterKey: %s - EpisodeTitle: %s", ogcr, fileName)
+		logger.Log(false, "Title match found: ChapterKey: %s - EpisodeTitle: %s", ogcr, fileName)
 	}
 
 	seasonDir := filepath.Join(baseDir, seasonFolderName)
 
 	if newFileName == "" {
-		logger.DebugLog(false, "Could not determine episode title, sending to stray")
+		logger.Log(false, "Could not determine episode title, sending to stray")
 		return strayfolder
 	}
 	fullPathNoSuffix := filepath.Join(seasonDir, newFileName)
 
-	logger.DebugLog(false, "findMetaDataMatch: returning %s", fullPathNoSuffix)
+	logger.Log(false, "findMetaDataMatch: returning %s", fullPathNoSuffix)
 	return fullPathNoSuffix
 }
 
@@ -114,7 +114,7 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 func findTitleForChapter(chapterKey string, sindex shared.SeasonIndex) string {
 	normKey := shared.NormalizeDash(chapterKey)
 
-	logger.DebugLog(false, "findEpisodeKeyForChapter: chapterKey: %s - normKey: %s ", chapterKey, normKey)
+	logger.Log(false, "findEpisodeKeyForChapter: chapterKey: %s - normKey: %s ", chapterKey, normKey)
 
 	for epRange, ep := range sindex.EpisodeRange {
 		if shared.NormalizeDash(epRange) == normKey {
@@ -147,11 +147,11 @@ func findTitleRough(epKey string, sindex shared.SeasonIndex) string {
 
 	for _, ep := range sindex.EpisodeRange {
 		if strings.Contains(ep.Title, epKey) {
-			logger.DebugLog(false, "roughFindTitle match found: %s > %s", epKey, ep.Title)
+			logger.Log(false, "roughFindTitle match found: %s > %s", epKey, ep.Title)
 			return ep.Title
 		}
 	}
 
-	logger.DebugLog(false, "roughFindTitle did not find a match. for %s", epKey)
+	logger.Log(false, "roughFindTitle did not find a match. for %s", epKey)
 	return ""
 }

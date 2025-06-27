@@ -32,7 +32,7 @@ var listCmd = &cobra.Command{
 
 		allTorrents, err := scraper.FetchTorrents()
 		if err != nil {
-			logger.DebugLog(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
+			logger.Log(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
 			return
 		}
 

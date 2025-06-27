@@ -28,19 +28,19 @@ var downloadCmd = &cobra.Command{
 		spinner := ui.NewSpinner("🗃️ Preparing download.. ", ui.Animations["MetaFetcher"])
 
 		if len(args) < 1 {
-			logger.DebugLog(true, "⚠️ You must specify atleast one download-key")
+			logger.Log(true, "⚠️ You must specify atleast one download-key")
 			return
 		}
 
 		cfg := shared.LoadConfig()
 		if cfg.TargetDir == "" {
-			logger.DebugLog(true, "⚠️ No target directory set. Use 'setDir <path>' first.")
+			logger.Log(true, "⚠️ No target directory set. Use 'setDir <path>' first.")
 			return
 		}
 
 		torrentList, err := scraper.FetchTorrents()
 		if err != nil {
-			logger.DebugLog(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
+			logger.Log(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
 			return
 		}
 
@@ -50,7 +50,7 @@ var downloadCmd = &cobra.Command{
 		for _, arg := range args {
 			num, err := strconv.Atoi(arg)
 			if err != nil {
-				logger.DebugLog(true, "❌ Invalid syntax: %s", arg)
+				logger.Log(true, "❌ Invalid syntax: %s", arg)
 				return
 			}
 
@@ -67,14 +67,14 @@ var downloadCmd = &cobra.Command{
 
 			// no match for download-key
 			if match == nil {
-				logger.DebugLog(true, "⚠️  No torrent found for key %d and quality '%s'", num, quality)
+				logger.Log(true, "⚠️  No torrent found for key %d and quality '%s'", num, quality)
 				continue
 			}
 
 			// maybe rewrite this part
 			if forceKey != "" {
 				if len(args) > 1 {
-					logger.DebugLog(true, "❌ --forcekey may only be used with a single DownloadKey")
+					logger.Log(true, "❌ --forcekey may only be used with a single DownloadKey")
 				}
 				match.ChapterRange = forceKey
 			}
@@ -82,8 +82,8 @@ var downloadCmd = &cobra.Command{
 			dKey := ui.StyleFactory(fmt.Sprintf("%4d", match.DownloadKey), ui.Style.Pink)
 			title := ui.StyleFactory(match.TorrentName, ui.Style.LBlue)
 
-			logger.DebugLog(true, "🔍 Matched DownloadKey %s → %s (%s) [%s]", dKey, title, match.Quality, match.ChapterRange)
-			logger.DebugLog(true, "🎬 Starting download: %s (%s)\n", match.TorrentName, match.Quality)
+			logger.Log(true, "🔍 Matched DownloadKey %s → %s (%s) [%s]", dKey, title, match.Quality, match.ChapterRange)
+			logger.Log(true, "🎬 Starting download: %s (%s)\n", match.TorrentName, match.Quality)
 			matches = append(matches, *match)
 		}
 

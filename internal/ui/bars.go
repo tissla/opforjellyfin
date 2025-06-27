@@ -45,7 +45,7 @@ func FollowProgress(doneChan chan struct{}) {
 			num := len(downloads)
 			ClearLines(num + 2)
 			renderAllBars(downloads)
-			logger.DebugLog(false, "ALLDONE! UI shutting down.")
+			logger.Log(false, "ALLDONE! UI shutting down.")
 
 			// callback wedone
 			doneChan <- struct{}{}

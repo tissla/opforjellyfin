@@ -78,7 +78,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 
 	shared.ClearActiveDownloads()
 
-	logger.DebugLog(true, "\n✅ All downloads finished and placed.")
+	logger.Log(true, "\n✅ All downloads finished and placed.")
 }
 
 // sequential

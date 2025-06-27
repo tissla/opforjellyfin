@@ -17,7 +17,7 @@ func ExtractChapterRangeFromTitle(title string) string {
 	re := regexp.MustCompile(`(?i)\[One Pace\]\[([^\]]+)\]`)
 	matches := re.FindStringSubmatch(title)
 	if len(matches) < 2 {
-		logger.DebugLog(false, "could not extract chapter info from title: %s", title)
+		logger.Log(false, "could not extract chapter info from title: %s", title)
 		return ""
 	}
 
@@ -34,7 +34,7 @@ func ExtractChapterRangeFromTitle(title string) string {
 		return first
 	}
 
-	logger.DebugLog(false, "could not parse chapter format: %s", first)
+	logger.Log(false, "could not parse chapter format: %s", first)
 	return ""
 }
 

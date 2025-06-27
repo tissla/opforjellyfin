@@ -21,24 +21,24 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 	var vidPaths []string
 	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			logger.DebugLog(true, "Failed walking file: %v", err)
+			logger.Log(true, "Failed walking file: %v", err)
 			return nil
 		}
 		if info.IsDir() || !strings.HasSuffix(strings.ToLower(info.Name()), ".mkv") && !strings.HasSuffix(strings.ToLower(info.Name()), ".mp4") {
 			return nil
 		}
-		logger.DebugLog(false, "added path: %s", path)
+		logger.Log(false, "added path: %s", path)
 		vidPaths = append(vidPaths, path)
 		return nil
 	})
 
 	if err != nil {
-		logger.DebugLog(true, "Error walking tmpDir: %v", err)
+		logger.Log(true, "Error walking tmpDir: %v", err)
 		return
 	}
 
 	for _, path := range vidPaths {
-		logger.DebugLog(false, "→ Found: %s", path)
+		logger.Log(false, "→ Found: %s", path)
 		filesChecked++
 
 		// readable src for msg
@@ -49,7 +49,7 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 		// match and place
 		msg, err := MatchAndPlaceVideo(path, outDir, index, td.ChapterRange)
 		if err != nil {
-			logger.DebugLog(true, "Error placing file: %v", err)
+			logger.Log(true, "Error placing file: %v", err)
 		} else if msg != "" {
 			filesPlaced++
 			//save msg for final summary
@@ -66,5 +66,5 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 
 	td.MarkPlaced(placedMsg)
 
-	logger.DebugLog(false, "File placement done: %d checked, %d placed", filesChecked, filesPlaced)
+	logger.Log(false, "File placement done: %d checked, %d placed", filesChecked, filesPlaced)
 }

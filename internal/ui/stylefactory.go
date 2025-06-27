@@ -77,8 +77,8 @@ func StyleByRange(input interface{}, min, max int) string {
 	}
 
 	r := interp(255, 0, ratio)
-	g := interp(0, 255, ratio)
-	b := interp(0, 0, ratio)
+	g := 255 - r //rest of color
+	b := 0       //always zero
 
 	color := fmt.Sprintf("#%02x%02x%02x", r, g, b)
 

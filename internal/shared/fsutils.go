@@ -9,26 +9,26 @@ import (
 
 // safeMoveFile moves a file safely, creates the directory if it does not exist
 func SafeMoveFile(src, dst string) error {
-	logger.DebugLog(false, "sfm: starting move from %s to %s", src, dst)
+	logger.Log(false, "sfm: starting move from %s to %s", src, dst)
 
-	logger.DebugLog(false, "sfm: copying file from %s to %s", src, dst)
+	logger.Log(false, "sfm: copying file from %s to %s", src, dst)
 	if err := CopyFile(src, dst, 0644); err != nil {
-		logger.DebugLog(true, "sfm: copyFile failed: %v", err)
+		logger.Log(true, "sfm: copyFile failed: %v", err)
 		return err
 	}
-	logger.DebugLog(false, "sfm: copyFile succeeded")
+	logger.Log(false, "sfm: copyFile succeeded")
 
 	if err := os.Chmod(dst, 0644); err != nil {
-		logger.DebugLog(true, "sfm: chmod failed: %v", err)
+		logger.Log(true, "sfm: chmod failed: %v", err)
 		return err
 	}
 
-	logger.DebugLog(false, "sfm: removing source file: %s", src)
+	logger.Log(false, "sfm: removing source file: %s", src)
 	if err := os.Remove(src); err != nil {
-		logger.DebugLog(true, "sfm: failed to remove src: %v", err)
+		logger.Log(true, "sfm: failed to remove src: %v", err)
 		return err
 	}
-	logger.DebugLog(false, "sfm: source file removed")
+	logger.Log(false, "sfm: source file removed")
 
 	return nil
 }

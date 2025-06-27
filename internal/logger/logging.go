@@ -32,7 +32,7 @@ func EnableDebugLogging() {
 }
 
 // threadsafe logger
-func DebugLog(showUser bool, format string, args ...any) {
+func Log(showUser bool, format string, args ...any) {
 	if showUser {
 		fmt.Printf(format+"\n", args...)
 	}
@@ -70,7 +70,7 @@ func ShowLogEntries(n int) {
 type debugLogWriter struct{}
 
 func (w debugLogWriter) Write(p []byte) (n int, err error) {
-	DebugLog(false, "%s", strings.TrimSpace(string(p)))
+	Log(false, "%s", strings.TrimSpace(string(p)))
 	return len(p), nil
 }
 
