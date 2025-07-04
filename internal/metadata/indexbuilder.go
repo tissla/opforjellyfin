@@ -3,9 +3,12 @@ package metadata
 import (
 	"fmt"
 	"io/fs"
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -59,6 +62,7 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 
 	// put range on season
 	calculateSeasonRanges(index)
+	nameSeasons(index, baseDir)
 
 	return index, nil
 }
@@ -85,6 +89,50 @@ func calculateSeasonRanges(index *shared.MetadataIndex) {
 		}
 		sidx.Range = fmt.Sprintf("%d-%d", min, max)
 		index.Seasons[skey] = sidx
+	}
+}
+
+func nameSeasons(index *shared.MetadataIndex, baseDir string) {
+	tvshowPath := filepath.Join(baseDir, "tvshow.nfo")
+
+	data, err := os.ReadFile(tvshowPath)
+	if err != nil {
+		logger.Log(false, "indexbuilder: Could not read tvshow.nfo: %v", err)
+		return
+	}
+
+	// Parse all namedseason tags
+	// Pattern: <namedseason number="X">Y. Season Name</namedseason>
+	re := regexp.MustCompile(`<namedseason\s+number="(\d+)">([^<]+)</namedseason>`)
+	matches := re.FindAllSubmatch(data, -1)
+
+	seasonNames := make(map[string]string)
+	for _, match := range matches {
+		if len(match) >= 3 {
+			seasonNum := string(match[1])
+			seasonName := string(match[2])
+
+			// Create the season key (e.g., "Season 01", "Season 10")
+			snum, _ := strconv.Atoi(seasonNum)
+			seasonKey := fmt.Sprintf("Season %d", snum)
+
+			// Remove the number prefix from the name (e.g., "1. Romance Dawn" -> "Romance Dawn")
+			cleanName := strings.TrimSpace(seasonName)
+			if idx := strings.Index(cleanName, ". "); idx != -1 {
+				cleanName = cleanName[idx+2:]
+			}
+
+			seasonNames[seasonKey] = cleanName
+		}
+	}
+
+	// Apply names to the index
+	for seasonKey, seasonData := range index.Seasons {
+		if name, exists := seasonNames[seasonKey]; exists {
+			seasonData.Name = name
+			index.Seasons[seasonKey] = seasonData
+			logger.Log(false, "Named %s as '%s'", seasonKey, name)
+		}
 	}
 }
 

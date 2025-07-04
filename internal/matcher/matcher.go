@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Matches video-file to metadata, then places it
@@ -31,22 +32,53 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 	ext := filepath.Ext(fileName)
 	finalPath := dstPathNoSuffix + ext
 
+	var msg string
+
 	if err := shared.SafeMoveFile(videoPath, finalPath); err != nil {
-		logger.Log(false, "sfm Error: %s", err)
-		return "", err
+		logger.Log(false, "sfm Error: %s, moving to strayvideos", err)
+
+		// Create strayvideos directory
+		strayDir := filepath.Join(defaultDir, "strayvideos")
+		if err := os.MkdirAll(strayDir, 0755); err != nil {
+			logger.Log(true, "Failed to create strayvideos directory: %v", err)
+			return "", fmt.Errorf("failed to create strayvideos: %w", err)
+		}
+
+		// Add timestamp to filename to avoid collisions
+		nameWithoutExt := strings.TrimSuffix(fileName, ext)
+		timestamp := time.Now().Format("20060102-150405")
+		strayFileName := fmt.Sprintf("%s_%s%s", nameWithoutExt, timestamp, ext)
+		strayPath := filepath.Join(strayDir, strayFileName)
+
+		if err := shared.SafeMoveFile(videoPath, strayPath); err != nil {
+			logger.Log(true, "Failed to move to strayvideos: %v", err)
+			return "", fmt.Errorf("failed to place file anywhere: %w", err)
+		}
+
+		// Format message for strayvideos
+		outFileName := ui.AnsiPadRight(fileName, 26, "..")
+		outRelPath := ui.AnsiPadRight("strayvideos/"+strayFileName, 36, "..")
+		msg = fmt.Sprintf("⚠️  Placed in stray: %s → %s", outFileName, outRelPath)
+
+	} else {
+		//relative path for logs
+		relPath, _ := filepath.Rel(defaultDir, finalPath)
+		//debug
+		logger.Log(false, "%s", fmt.Sprintf("placed: %s → %s", fileName, relPath))
+
+		// some formatting
+		fileNameNoPrefix := fileName
+		if len(fileName) > 10 {
+			fileNameNoPrefix = fileName[10:]
+		}
+		relPathNoPrefix := filepath.Base(relPath)
+		if len(relPathNoPrefix) > 10 {
+			relPathNoPrefix = relPathNoPrefix[10:]
+		}
+		outFileName := ui.AnsiPadRight(fileNameNoPrefix, 26, "..")
+		outRelPath := ui.AnsiPadRight(".."+relPathNoPrefix, 36, "..")
+		msg = fmt.Sprintf("🎞️  Placed: %s → %s", outFileName, outRelPath)
 	}
-
-	//relative path for logs
-	relPath, _ := filepath.Rel(defaultDir, finalPath)
-	//debug
-	logger.Log(false, "%s", fmt.Sprintf("placed: %s → %s", fileName, relPath))
-
-	// some formatting
-	fileNameNoPrefix := fileName[10:]
-	relPathNoPrefix := filepath.Base(relPath)[10:]
-	outFileName := ui.AnsiPadRight(fileNameNoPrefix, 26, "..")
-	outRelPath := ui.AnsiPadRight(".."+relPathNoPrefix, 36, "..")
-	msg := fmt.Sprintf("🎞️  Placed: %s → %s", outFileName, outRelPath)
 
 	return msg, nil
 }

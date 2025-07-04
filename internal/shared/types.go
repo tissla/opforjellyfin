@@ -19,6 +19,7 @@ type MetadataIndex struct {
 // seasons maps episodes
 type SeasonIndex struct {
 	Range        string                 `json:"range"`
+	Name         string                 `json:"name"`
 	EpisodeRange map[string]EpisodeData `json:"episodes"`
 }
 

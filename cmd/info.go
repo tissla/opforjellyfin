@@ -18,6 +18,7 @@ var verboseInfo bool
 
 type season struct {
 	sNum      int
+	sName     string
 	videos    int
 	totalnfos int
 }
@@ -47,6 +48,7 @@ var infoCmd = &cobra.Command{
 		}
 
 		var seasonFolders []season
+		metaIndex := metadata.LoadMetadataCache()
 
 		for _, f := range files {
 			if !f.IsDir() {
@@ -64,8 +66,16 @@ var infoCmd = &cobra.Command{
 			extNum := shared.ExtractSeasonNumber(f.Name())
 			sNum, _ := strconv.Atoi(extNum)
 
+			sName := ""
+			if metaIndex != nil {
+				if seasonData, exists := metaIndex.Seasons[f.Name()]; exists {
+					sName = seasonData.Name
+				}
+			}
+
 			seasonFolders = append(seasonFolders, season{
 				sNum:      sNum,
+				sName:     sName,
 				videos:    v,
 				totalnfos: nfo,
 			})
@@ -89,18 +99,26 @@ var infoCmd = &cobra.Command{
 
 func styleSeasonPrint(s season) string {
 
-	vids := ui.AnsiPadLeft(ui.StyleByRange(s.videos, 0, s.totalnfos), 4)
-	nfos := ui.AnsiPadRight(ui.StyleByRange(s.totalnfos, 0, s.totalnfos), 4)
+	vidStr := fmt.Sprintf("%4d", s.videos)
+	nfoStr := fmt.Sprintf("%-3d", s.totalnfos)
+
+	vids := ui.StyleByRange(vidStr, 0, s.totalnfos)
+	nfos := ui.StyleByRange(nfoStr, 0, s.totalnfos)
 
 	stringnum := fmt.Sprintf("%d", s.sNum)
 	snum := ui.AnsiPadLeft(ui.StyleFactory(stringnum, ui.Style.Pink), 3)
+
+	sname := ui.StyleFactory(s.sName, ui.Style.LBlue)
 
 	if s.sNum == 0 {
 		return fmt.Sprintf("Specials  : %s / %s", vids, nfos)
 	}
 
-	return fmt.Sprintf("Season %s: %s / %s", snum, vids, nfos)
+	leftPart := fmt.Sprintf("Season %s: %s / %s", snum, vids, nfos)
 
+	paddedLeft := ui.AnsiPadRight(leftPart, 25)
+
+	return fmt.Sprintf("%s | %s", paddedLeft, sname)
 }
 
 func init() {
