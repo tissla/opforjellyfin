@@ -18,11 +18,6 @@ func SafeMoveFile(src, dst string) error {
 	}
 	logger.Log(false, "sfm: copyFile succeeded")
 
-	if err := os.Chmod(dst, 0644); err != nil {
-		logger.Log(true, "sfm: chmod failed: %v", err)
-		return err
-	}
-
 	logger.Log(false, "sfm: removing source file: %s", src)
 	if err := os.Remove(src); err != nil {
 		logger.Log(true, "sfm: failed to remove src: %v", err)
@@ -51,7 +46,7 @@ func CopyFile(src, dst string, perm os.FileMode) error {
 		return err
 	}
 
-	return os.Chmod(dst, perm)
+	return nil
 }
 
 // bool
