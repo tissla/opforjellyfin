@@ -46,15 +46,21 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 You can choose to either use one of the released versions or build from source yourself.
 
-### [releases!](https://github.com/tissla/opforjellyfin/releases/tag/v1.0.0)
+### [Releases](https://github.com/tissla/opforjellyfin/releases/tag/v1.0.0)
 
 MacOS / Linux:
 
-1. Run `chmod +x opfor` to make the file runnable.
+1. Download the file for your system.
+
+2. Run `chmod +x opfor` to make the file runnable.
+
+3. Run with `./opfor --help` to get started.
 
 Windows:
 
-1. Download the .exe and run it through Powershell or Windows Terminal with `./opfor.exe --help`, for example
+1. Download the .exe file
+
+2. Run the file in Powershell or Windows Terminal `.\opfor.exe --help`
 
 A terminal that supports unicode-characters is heavily recommended for best experience.
 
