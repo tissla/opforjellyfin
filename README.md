@@ -58,9 +58,9 @@ MacOS / Linux:
 
 Windows:
 
-1. Download the .exe file
+1. Download the .exe file.
 
-2. Run the file in Powershell or Windows Terminal `.\opfor.exe --help`
+2. Run the file in Powershell or Windows Terminal with `.\opfor.exe --help` to get started.
 
 A terminal that supports unicode-characters is heavily recommended for best experience.
 
