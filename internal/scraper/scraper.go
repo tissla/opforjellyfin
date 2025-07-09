@@ -16,18 +16,26 @@ import (
 
 // TODO: sort file, add more structs, add scrape-map
 
-// FetchTorrents loads torrents from nyaa.si
-func FetchTorrents() ([]shared.TorrentEntry, error) {
+// gets the torrents using current config, throws error if no valid config found
+func FetchTorrents(cfg shared.Config) ([]shared.TorrentEntry, error) {
 	//prep
-	cfg := shared.LoadConfig()
-	baseURL := strings.TrimRight(cfg.TorrentAPIURL, "/")
+
+	// use scraper config from main config
+	srcConfig := cfg.Source
+
+	// ensure we have a valid scraper config
+	if srcConfig.Name == "" || srcConfig.BaseURL == "" {
+		return nil, fmt.Errorf("no scraper configuration found. Please run 'opfor setDir <path>' first")
+	}
+
+	baseURL := srcConfig.BaseURL
+
 	var rawEntries []shared.TorrentEntry
 
 	page := 1
 	for {
+		searchURL := fmt.Sprintf(baseURL+srcConfig.SearchPathTemplate, srcConfig.SearchQuery, page)
 
-		//nyaa specific
-		searchURL := fmt.Sprintf("%s/?f=0&c=1_2&q=one+pace&p=%d", baseURL, page)
 		resp, err := http.Get(searchURL)
 		if err != nil {
 			return nil, err
@@ -43,76 +51,113 @@ func FetchTorrents() ([]shared.TorrentEntry, error) {
 			return nil, err
 		}
 
-		rows := doc.Find("table tbody tr")
+		rows := doc.Find(srcConfig.RowSelector)
 		if rows.Length() == 0 {
-			break //donesies
+			break // finito
 		}
 
-		// nyaa-structure.
-		//TODO: add switch case to support other table structs
 		rows.Each(func(i int, s *goquery.Selection) {
-			title := s.Find("td:nth-child(2) a").Last().Text()
-			seedersStr := s.Find("td:nth-child(6)").Text()
-			torrentLink, _ := s.Find("td:nth-child(3) a[href^='/download/']").Attr("href")
-
-			torrentID := extractIDFromLink(torrentLink)
-
-			chapterRange := shared.ExtractChapterRangeFromTitle(title)
-			rawIndex := extractRawIndex(chapterRange)
-
-			seeders, _ := strconv.Atoi(strings.TrimSpace(seedersStr))
-			quality := parseQuality(title)
-			torrentName := extractTorrentName(title)
-
-			if torrentLink != "" && strings.Contains(strings.ToLower(title), "one pace") {
-				rawEntries = append(rawEntries, shared.TorrentEntry{
-					Title:         title,
-					Quality:       quality,
-					TorrentName:   torrentName,
-					Seeders:       seeders,
-					RawIndex:      rawIndex,
-					TorrentLink:   torrentLink,
-					TorrentID:     torrentID,
-					ChapterRange:  chapterRange,
-					IsSpecial:     chapterRange == "",
-					MetaDataAvail: metadata.HaveMetadata(chapterRange),
-					HaveIt:        metadata.HaveVideoStatus(chapterRange),
-				})
+			entry, ok := parseRow(s, &srcConfig, baseURL)
+			if ok {
+				rawEntries = append(rawEntries, entry)
 			}
 		})
 
 		page++
 	}
 
-	// sort by rawIndex ascending, then by seeders descending
-	// maybe move this out to helpers
-	sort.SliceStable(rawEntries, func(i, j int) bool {
-		if rawEntries[i].RawIndex == rawEntries[j].RawIndex {
-			return rawEntries[i].Seeders > rawEntries[j].Seeders
+	// Sort and assign download keys
+	return processEntries(rawEntries), nil
+}
+
+// parseRow extracts torrent data from a table row using the scraper config
+func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string) (shared.TorrentEntry, bool) {
+	// Extract fields using configured selectors
+	title := s.Find(config.Fields.Title).Text()
+	seedersStr := s.Find(config.Fields.Seeders).Text()
+	torrentLink, _ := s.Find(config.Fields.TorrentLink).Attr("href")
+
+	// Validate based on config
+	if config.Validation.RequiredInTitle != "" {
+		if !strings.Contains(strings.ToLower(title), strings.ToLower(config.Validation.RequiredInTitle)) {
+			return shared.TorrentEntry{}, false
 		}
-		return rawEntries[i].RawIndex < rawEntries[j].RawIndex
+	}
+
+	if torrentLink == "" {
+		return shared.TorrentEntry{}, false
+	}
+
+	// Extract torrent ID using regex from config
+	torrentID := 0
+	if config.Fields.TorrentID != "" {
+		re := regexp.MustCompile(config.Fields.TorrentID)
+		matches := re.FindStringSubmatch(torrentLink)
+		if len(matches) >= 2 {
+			torrentID, _ = strconv.Atoi(matches[1])
+		}
+	}
+
+	// Parse the rest of the data
+	chapterRange := shared.ExtractChapterRangeFromTitle(title)
+	rawIndex := extractRawIndex(chapterRange)
+	seeders, _ := strconv.Atoi(strings.TrimSpace(seedersStr))
+	quality := parseQuality(title)
+	torrentName := extractTorrentName(title)
+
+	// Make torrent link absolute if needed
+	if !strings.HasPrefix(torrentLink, "http") {
+		torrentLink = baseURL + torrentLink
+	}
+
+	return shared.TorrentEntry{
+		Title:         title,
+		Quality:       quality,
+		TorrentName:   torrentName,
+		Seeders:       seeders,
+		RawIndex:      rawIndex,
+		TorrentLink:   torrentLink,
+		TorrentID:     torrentID,
+		ChapterRange:  chapterRange,
+		IsSpecial:     chapterRange == "",
+		MetaDataAvail: metadata.HaveMetadata(chapterRange),
+		HaveIt:        metadata.HaveVideoStatus(chapterRange),
+	}, true
+}
+
+// processEntries sorts entries, filters out dead torrents and assigns unique download keys.
+func processEntries(rawEntries []shared.TorrentEntry) []shared.TorrentEntry {
+	// filter out torrents with 0 seeders
+	filtered := make([]shared.TorrentEntry, 0, len(rawEntries))
+	for _, entry := range rawEntries {
+		if entry.Seeders > 0 {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	// sort by rawIndex ascending, then seeders descending
+	sort.SliceStable(filtered, func(i, j int) bool {
+		if filtered[i].RawIndex == filtered[j].RawIndex {
+			return filtered[i].Seeders > filtered[j].Seeders
+		}
+		return filtered[i].RawIndex < filtered[j].RawIndex
 	})
 
-	rangeToKey := map[string]int{}
+	// assign unique download keys
 	key := 1
 	specialKey := 9999
 
-	// assign downloadKey after rawIndex
-	for i := range rawEntries {
-		cr := rawEntries[i].ChapterRange
-		if cr == "" {
-			rawEntries[i].DownloadKey = specialKey
+	for i := range filtered {
+		if filtered[i].IsSpecial || filtered[i].ChapterRange == "" {
+			filtered[i].DownloadKey = specialKey
 			specialKey--
-			continue // specials
-		}
-		if _, exists := rangeToKey[cr]; !exists {
-			rangeToKey[cr] = key
+		} else {
+			filtered[i].DownloadKey = key
 			key++
 		}
-		rawEntries[i].DownloadKey = rangeToKey[cr]
 	}
 
-	return rawEntries, nil
+	return filtered
 }
 
 // parseQuality returns video quality based on title string
@@ -155,15 +200,4 @@ func extractTorrentName(title string) string {
 		}
 	}
 	return "Unknown"
-}
-
-// extractIDFromLink parses numeric ID from a /download/xxxxxxx.torrent link
-func extractIDFromLink(link string) int {
-	re := regexp.MustCompile(`/download/(\d+)\.torrent`)
-	matches := re.FindStringSubmatch(link)
-	if len(matches) >= 2 {
-		id, _ := strconv.Atoi(matches[1])
-		return id
-	}
-	return 0
 }

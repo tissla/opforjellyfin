@@ -43,7 +43,7 @@ var infoCmd = &cobra.Command{
 		}
 
 		if verboseInfo {
-			fmt.Printf("📡 Torrent Provider: %s\n", cfg.TorrentAPIURL)
+			fmt.Printf("📡 Torrent Provider: %s\n", cfg.Source.BaseURL)
 			fmt.Printf("🐙 Metadata Source:  https://github.com/%s\n", cfg.GitHubRepo)
 		}
 
@@ -85,8 +85,6 @@ var infoCmd = &cobra.Command{
 		sort.Slice(seasonFolders, func(i, j int) bool {
 			return seasonFolders[i].sNum < seasonFolders[j].sNum
 		})
-
-		fmt.Printf("📦 Seasons Downloaded: %d\n", len(seasonFolders))
 
 		fmt.Println("\n📁 Season folders:")
 		for _, s := range seasonFolders {

@@ -2,11 +2,13 @@
 package metadata
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 )
@@ -66,6 +68,8 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 		return fmt.Errorf("failed to build metadata index: %w", err)
 	}
 
+	updateConfig(tmpDir, cfg)
+
 	spinner.Stop()
 
 	path := filepath.Join(baseDir, "metadata-index.json")
@@ -73,4 +77,18 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	fmt.Println("✅ Metadata fetch and indexing complete.")
 	return nil
+}
+
+func updateConfig(tmpDir string, cfg shared.Config) {
+	cfgFile := filepath.Join(tmpDir, "config.json")
+
+	data, _ := os.ReadFile(cfgFile)
+
+	var srcConfig shared.ScraperConfig
+	if err := json.Unmarshal(data, &srcConfig); err != nil {
+		logger.Log(false, "Error updating source config: %v", err)
+	}
+
+	cfg.Source = srcConfig
+	shared.SaveConfig(cfg)
 }

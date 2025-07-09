@@ -38,7 +38,11 @@ var downloadCmd = &cobra.Command{
 			return
 		}
 
-		torrentList, err := scraper.FetchTorrents()
+		if cfg.Source.BaseURL == "" {
+			logger.Log(true, "No valid scraper configuration found. Please run 'sync'")
+		}
+
+		torrentList, err := scraper.FetchTorrents(cfg)
 		if err != nil {
 			logger.Log(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
 			return

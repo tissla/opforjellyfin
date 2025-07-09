@@ -6,9 +6,31 @@ import "time"
 
 // config file
 type Config struct {
-	TargetDir     string `json:"target_dir"`
-	GitHubRepo    string `json:"github_base_url"`
-	TorrentAPIURL string `json:"torrent_api_url"`
+	TargetDir  string        `json:"target_dir"`
+	GitHubRepo string        `json:"github_base_url"`
+	Source     ScraperConfig `json:"source"`
+}
+
+// scrape config
+type ScraperConfig struct {
+	Name               string           `json:"name"`
+	BaseURL            string           `json:"base_url"`
+	SearchPathTemplate string           `json:"search_path_template"`
+	SearchQuery        string           `json:"search_query"`
+	RowSelector        string           `json:"row_selector"`
+	Fields             ScraperFields    `json:"fields"`
+	Validation         ValidationConfig `json:"validation"`
+}
+
+type ScraperFields struct {
+	Title       string `json:"title"`
+	Seeders     string `json:"seeders"`
+	TorrentLink string `json:"torrent_link"`
+	TorrentID   string `json:"torrent_id"`
+}
+
+type ValidationConfig struct {
+	RequiredInTitle string `json:"required_in_title"`
 }
 
 // Index maps seasons

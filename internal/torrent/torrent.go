@@ -23,7 +23,7 @@ import (
 func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 
 	// get torrent meta-info
-	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().TorrentAPIURL, td.TorrentID)
+	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().Source.BaseURL, td.TorrentID)
 	logger.Log(false, "Fetching torrent: %s, ID: %s", torrentURL, td)
 
 	// get metadata

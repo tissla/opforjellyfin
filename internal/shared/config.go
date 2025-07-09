@@ -3,16 +3,14 @@ package shared
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 )
 
 var defaultCfg = Config{
-	TargetDir:     "",
-	GitHubRepo:    "tissla/one-pace-jellyfin",
-	TorrentAPIURL: "https://nyaa.si",
+	TargetDir:  "",
+	GitHubRepo: "tissla/one-pace-jellyfin",
 }
 
 // loads config-file file, creates it if it does not exist
@@ -53,7 +51,6 @@ func EnsureConfigExists() string {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 
 		SaveConfig(defaultCfg)
-		fmt.Printf("📁 Created default config at: %s\n", path)
 	}
 
 	return path

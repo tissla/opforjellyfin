@@ -8,7 +8,6 @@ import (
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,8 +29,17 @@ var listCmd = &cobra.Command{
 
 		spinner := ui.NewMultirowSpinner(ui.Animations["Searcher"], 4)
 
-		allTorrents, err := scraper.FetchTorrents()
+		cfg := shared.LoadConfig()
+
+		if cfg.Source.BaseURL == "" {
+			spinner.Stop()
+			logger.Log(true, "⚠️ No valid scraper configuration found. Please run 'sync' or 'setDir'")
+			return
+		}
+
+		allTorrents, err := scraper.FetchTorrents(cfg)
 		if err != nil {
+			spinner.Stop()
 			logger.Log(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
 			return
 		}
@@ -74,13 +82,18 @@ func applyFilters(t shared.TorrentEntry) bool {
 	}
 	// range filter
 	if rangeFilter != "" {
-		parts := strings.Split(rangeFilter, "-")
-		if len(parts) == 2 {
-			min, _ := strconv.Atoi(parts[0])
-			max, _ := strconv.Atoi(parts[1])
-			if t.DownloadKey < min || t.DownloadKey > max {
-				return false
-			}
+
+		// defaults
+		cMin, cMax, min, max := 0, 0, 0, 0
+
+		// chapterRange of torrent
+		cMin, cMax = shared.ParseRange(t.ChapterRange)
+
+		// chosen chapterRange
+		min, max = shared.ParseRange(rangeFilter)
+
+		if cMin < 0 || cMax < 0 || !shared.RangesOverlap(cMin, cMax, min, max) {
+			return false
 		}
 	}
 	// title filter
