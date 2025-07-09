@@ -1,5 +1,8 @@
 opforjellyfin
 opfor
+opfor-linux
+opfor-macos
+opfor.exe
 
 *.log
 
