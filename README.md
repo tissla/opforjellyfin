@@ -44,6 +44,22 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 ## 🚀 Installation
 
+You can choose to either use one of the released versions or build from source yourself.
+
+### [releases!](https://github.com/tissla/opforjellyfin/releases/tag/v1.0.0)
+
+MacOS / Linux:
+
+1. Run `chmod +x opfor` to make the file runnable.
+
+Windows:
+
+1. Download the .exe and run it through Powershell or Windows Terminal with `./opfor.exe --help`, for example
+
+A terminal that supports unicode-characters is heavily recommended for best experience.
+
+### Build from source
+
 1. **Install Go** (version ≥ 1.23)
 
 2. Clone repo:
@@ -67,7 +83,7 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
    ./opfor setDir "/media/One Piece/One Pace"
    ```
 
-1. Find all available episodes with 'list', or use the -t flag to specify a title, or -r flag to specify a key-range.
+1. Find all available episodes with 'list', or use the -t flag to specify a title, or -r flag to specify a chapter-range.
 
    ```bash
    ./opfor list
