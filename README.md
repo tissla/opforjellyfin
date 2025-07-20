@@ -46,6 +46,8 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 You can choose to either use one of the released versions or build from source yourself.
 
+For this program to work, you need to have 'git' installed.
+
 ### [Releases](https://github.com/tissla/opforjellyfin/releases/tag/v1.0.0)
 
 MacOS / Linux:
