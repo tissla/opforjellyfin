@@ -42,7 +42,7 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 5. And much more!
 
-## 🚀 Installation
+## 🔧 Installation
 
 You can choose to either use one of the released versions or build from source yourself.
 
@@ -83,7 +83,7 @@ A terminal that supports unicode-characters is heavily recommended for best expe
    go build -o opfor
    ```
 
-## 🔧 Usage (Start Here!)
+## 🚀 Usage (Start Here!)
 
 1. Set your download directory before doing anything else. All your metadata will be stored here, and downloads will be matched to their proper folders.
 
