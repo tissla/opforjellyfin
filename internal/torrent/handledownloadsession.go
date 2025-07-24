@@ -9,19 +9,33 @@ import (
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 )
 
 func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
+	// based on testing, might need to change
+	const maxConcurrent = 5
 
-	// start downloads (with UIprogress)
+	// context (for ctrl C cancellation)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle Ctrl+C
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		logger.Log(true, "\n🛑 Received interrupt signal, cancelling downloads...")
+		cancel()
+	}()
+
+	// Prepare all download metadata first
 	allTDs := []*shared.TorrentDownload{}
-	var wg sync.WaitGroup
-
 	for _, entry := range entries {
-
 		dKey := ui.StyleFactory(fmt.Sprintf("%4d", entry.DownloadKey), ui.Style.Pink)
 		title := ui.StyleFactory(entry.TorrentName, ui.Style.LBlue)
 
@@ -37,36 +51,84 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 		allTDs = append(allTDs, td)
 	}
 
-	//start ui
+	// Start UI progress monitoring
 	doneChan := make(chan struct{})
 	go ui.FollowProgress(doneChan)
 
-	for i, entry := range entries {
-		wg.Add(1)
-		go func(i int, entry shared.TorrentEntry) {
-			defer wg.Done()
-			td := allTDs[i]
-			_ = StartTorrent(context.Background(), td)
+	// Create work queue
+	workQueue := make(chan int, len(entries))
+	for i := range entries {
+		workQueue <- i
+	}
+	close(workQueue)
 
-		}(i, entry)
+	// Start worker goroutines
+	var wg sync.WaitGroup
+	for w := 0; w < maxConcurrent; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range workQueue {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					td := allTDs[i]
+					// 30 min timeout / download
+					downloadCtx, downloadCancel := context.WithTimeout(ctx, 30*time.Minute)
+					if err := StartTorrent(downloadCtx, td); err != nil {
+						if err == context.DeadlineExceeded {
+							logger.Log(true, "Download timeout for %s (no progress in 30 min)", td.Title)
+							td.PlacementProgress = "❌ Timeout - no seeders?"
+						} else if err == context.Canceled {
+							td.PlacementProgress = "❌ Cancelled"
+						} else {
+							logger.Log(true, "Download failed for %s: %v", td.Title, err)
+							td.PlacementProgress = "❌ Failed"
+						}
+						shared.SaveTorrentDownload(td)
+					}
+					downloadCancel()
+				}
+			}
+		}()
 	}
 
-	wg.Wait()
-	// cool spinner
-	//spinner := ui.NewSpinner(" 🗃️ Placing files", ui.Animations["MoviePlacement"])
+	// Wait for all downloads to complete or context cancellation
+	downloadsDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(downloadsDone)
+	}()
 
-	// placing files
-	StartPlacement(allTDs, outDir)
+	select {
+	case <-downloadsDone:
+		// do nothing
+	case <-ctx.Done():
+		// when cancelled manually
+		logger.Log(true, "Waiting for downloads to stop...")
+		select {
+		case <-downloadsDone:
+		case <-time.After(5 * time.Second):
+			logger.Log(true, "Force stopping...")
+		}
+	}
 
-	// stop spinner
-	//spinner.Stop()
-	// tell UI we done
+	// only place if not cancelled
+	if ctx.Err() == nil {
+		StartPlacement(allTDs, outDir)
+	}
+
+	// UI signal
 	doneChan <- struct{}{}
 
-	// wait for UI to be done
-	<-doneChan
+	// Wait for UI to finish (for a sec)
+	select {
+	case <-doneChan:
+	case <-time.After(1 * time.Second):
+	}
 
-	// print placement data
+	// Print placement results
 	for _, td := range allTDs {
 		if len(td.PlacementFull) > 0 {
 			fmt.Printf("🎞️  %s\n", ui.AnsiPadRight(td.Title, 36, ".."))
@@ -78,7 +140,11 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 
 	shared.ClearActiveDownloads()
 
-	logger.Log(true, "\n✅ All downloads finished and placed.")
+	if ctx.Err() != nil {
+		logger.Log(true, "\n❌ Downloads cancelled by user.")
+	} else {
+		logger.Log(true, "\n✅ All downloads finished and placed.")
+	}
 }
 
 // sequential

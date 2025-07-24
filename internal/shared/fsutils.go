@@ -1,15 +1,51 @@
 package shared
 
 import (
+	"fmt"
 	"io"
 	"opforjellyfin/internal/logger"
 	"os"
 	"path/filepath"
+	"sync"
 )
+
+var (
+	// Mutex for directory creation operations
+	dirMutex sync.Mutex
+)
+
+// CreateTempTorrentDir safely creates a temporary directory for torrent downloads
+func CreateTempTorrentDir(torrentID int) (string, error) {
+	dirMutex.Lock()
+	defer dirMutex.Unlock()
+
+	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", torrentID))
+
+	// Check if it already exists
+	if info, err := os.Stat(tmpDir); err == nil && info.IsDir() {
+		logger.Log(false, "Temp dir already exists: %s", tmpDir)
+		return tmpDir, nil
+	}
+
+	// Create with MkdirAll (safe for concurrent calls)
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+
+	logger.Log(false, "Created temp dir: %s", tmpDir)
+	return tmpDir, nil
+}
 
 // safeMoveFile moves a file safely, creates the directory if it does not exist
 func SafeMoveFile(src, dst string) error {
 	logger.Log(false, "sfm: starting move from %s to %s", src, dst)
+
+	// Ensure destination directory exists
+	dstDir := filepath.Dir(dst)
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		logger.Log(true, "sfm: failed to create dst dir: %v", err)
+		return err
+	}
 
 	logger.Log(false, "sfm: copying file from %s to %s", src, dst)
 	if err := CopyFile(src, dst, 0644); err != nil {
@@ -46,7 +82,7 @@ func CopyFile(src, dst string, perm os.FileMode) error {
 		return err
 	}
 
-	return nil
+	return out.Chmod(perm)
 }
 
 // bool
@@ -64,6 +100,7 @@ func CopyDir(src, dst string) error {
 func SyncDir(src, dst string) error {
 	return walkAndCopy(src, dst, true)
 }
+
 func walkAndCopy(src, dst string, onlyIfChanged bool) error {
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

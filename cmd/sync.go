@@ -18,7 +18,10 @@ var syncCmd = &cobra.Command{
 			fmt.Println("⚠️  No target directory set. Use 'setDir' first.")
 			return
 		}
-		metadata.SyncMetadata(cfg.TargetDir, cfg)
+		err := metadata.SyncMetadata(cfg.TargetDir, cfg)
+		if err != nil {
+			fmt.Println("⚠️  Unable to sync metadata. (Is git installed?)")
+		}
 	},
 }
 

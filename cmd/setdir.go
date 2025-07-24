@@ -36,9 +36,15 @@ func SetDir(dir string, force bool) {
 	fmt.Println("✅ Default target directory set to:", abs)
 
 	if force {
-		metadata.FetchAllMetadata(abs, cfg)
+		err := metadata.FetchAllMetadata(abs, cfg)
+		if err != nil {
+			fmt.Println("⚠️  Unable to sync metadata. (Is git installed?)")
+		}
 	} else {
-		metadata.SyncMetadata(abs, cfg)
+		err := metadata.SyncMetadata(abs, cfg)
+		if err != nil {
+			fmt.Println("⚠️  Unable to sync metadata. (Is git installed?)")
+		}
 	}
 }
 

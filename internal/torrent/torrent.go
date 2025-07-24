@@ -3,25 +3,18 @@ package torrent
 
 import (
 	"context"
-
 	"fmt"
 	"net/http"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
-	"os"
-	"path/filepath"
-
 	"time"
 
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
 )
 
-// used for writing to json-file for live tracking of concurrent background downloads. currently just saves progress
-
 // main torrent download and tracker
 func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
-
 	// get torrent meta-info
 	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().Source.BaseURL, td.TorrentID)
 	logger.Log(false, "Fetching torrent: %s, ID: %s", torrentURL, td)
@@ -41,13 +34,13 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 		return err
 	}
 
-	// create tempdir
-	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		return err
+	// create tempdir using safe function
+	tmpDir, err := shared.CreateTempTorrentDir(td.TorrentID)
+	if err != nil {
+		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
 
-	// start the torrent-client
+	// start the torrent-client with optimized settings for concurrent downloads
 	cfg := torrent.NewDefaultClientConfig()
 	cfg.DataDir = tmpDir
 	cfg.NoUpload = true
@@ -57,6 +50,7 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 	if err != nil {
 		return err
 	}
+	defer closeWithLogs(client)
 
 	// add torrent
 	t, err := client.AddTorrent(meta)
@@ -70,23 +64,25 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 		td.TotalSize = t.Length()
 		logger.Log(false, "Torrent metadata loaded: %s", td)
 	case <-time.After(20 * time.Second):
-		return err
+		return fmt.Errorf("timeout waiting for torrent metadata")
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 
 	// start download
 	td.TotalSize = t.Length()
-
 	t.DownloadAll()
 	shared.SaveTorrentDownload(td)
 
 	// watch progress, save to activefile
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for t.BytesMissing() > 0 {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(1 * time.Second):
+		case <-ticker.C:
 			td.Progress = t.BytesCompleted()
 			shared.SaveTorrentDownload(td)
 		}
@@ -96,7 +92,6 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 	td.Progress = td.TotalSize
 	logger.Log(false, "Torrent contains %d files", len(t.Files()))
 
-	closeWithLogs(client)
 	td.Done = true
 	td.PlacementProgress = "⏳ Waiting to place.."
 	shared.SaveTorrentDownload(td)
@@ -107,6 +102,8 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 
 // loghelper
 func closeWithLogs(client *torrent.Client) {
-	logger.Log(false, "Torrentclient closed for: %s", client)
-	client.Close()
+	if client != nil {
+		logger.Log(false, "Closing torrent client")
+		client.Close()
+	}
 }

@@ -4,26 +4,18 @@ import (
 	"fmt"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
-	"os"
-	"os/signal"
 	"strings"
 	"time"
 )
 
 func FollowProgress(doneChan chan struct{}) {
-
 	first := true
 	ticker := time.NewTicker(300 * time.Millisecond)
 	defer ticker.Stop()
 
-	// ctrl+C cancels bars, wont cancel downloads tho
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-
 	for {
 		select {
 		case <-ticker.C:
-
 			downloads := shared.GetActiveDownloads()
 			num := len(downloads)
 
@@ -40,6 +32,7 @@ func FollowProgress(doneChan chan struct{}) {
 
 			// render current status
 			renderAllBars(downloads)
+
 		case <-doneChan:
 			downloads := shared.GetActiveDownloads()
 			num := len(downloads)
@@ -50,15 +43,11 @@ func FollowProgress(doneChan chan struct{}) {
 			// callback wedone
 			doneChan <- struct{}{}
 			return
-		case <-signalChan:
-			fmt.Println("\n🛑 Cancelled by user.")
-			return
 		}
 	}
 }
 
 // render bars
-
 func renderSingleBar(title, msg string, progress, total int64, titlewidth, barwidth int) string {
 	if total == 0 {
 		return fmt.Sprintf("%s [%s] %s", AnsiPadRight(title, titlewidth), strings.Repeat("░", barwidth), AnsiPadLeft("0%", 4))
@@ -87,7 +76,6 @@ func renderSingleBar(title, msg string, progress, total int64, titlewidth, barwi
 func renderAllBars(downloads []*shared.TorrentDownload) {
 	allbars := ""
 	for _, td := range downloads {
-
 		bar := renderSingleBar(td.Title, td.PlacementProgress, td.Progress, td.TotalSize, 15, 40)
 		allbars = allbars + bar + "\n"
 	}

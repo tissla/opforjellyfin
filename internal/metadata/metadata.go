@@ -46,6 +46,7 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	if err := exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
 		spinner.Stop()
+		fmt.Println("⚠️  Git clone failed: %w", err)
 		return fmt.Errorf("git clone failed: %w", err)
 	}
 
