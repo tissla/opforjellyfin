@@ -3,19 +3,25 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+
+	"opforjellyfin/internal/flags"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/scraper"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
-	"sort"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	rangeFilter  string
-	titleFilter  string
+	rangeFilter          string
+	titleFilter          string
+	minimumQualityFilter = flags.StringChoice([]string{"480p", "720p", "1080p"})
+	qualityFilter        = flags.StringChoice([]string{"480p", "720p", "1080p"})
+
 	onlySpecials bool
 	verboseList  bool
 
@@ -26,7 +32,6 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all available One Pace seasons and specials",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		spinner := ui.NewMultirowSpinner(ui.Animations["Searcher"], 4)
 
 		cfg := shared.LoadConfig()
@@ -64,13 +69,11 @@ var listCmd = &cobra.Command{
 
 		fmt.Println("📚 Filtered Download List:\n")
 		for _, t := range filtered {
-
 			if verboseList {
 				renderVerboseRow(t)
 			} else {
 				renderRow(t)
 			}
-
 		}
 	},
 }
@@ -100,6 +103,20 @@ func applyFilters(t shared.TorrentEntry) bool {
 	if titleFilter != "" && !strings.Contains(strings.ToLower(t.TorrentName), strings.ToLower(titleFilter)) {
 		return false
 	}
+
+	if qualityFilter.String() != "" && t.Quality != qualityFilter.Value {
+		return false
+	}
+
+	if minimumQualityFilter.String() != "" {
+		// Not sure about error checking here, both values should be guaranteed parsable if everything else works as intended.
+		quality, _ := strconv.Atoi(strings.TrimSuffix(t.Quality, "p"))
+		minimumQuality, _ := strconv.Atoi(strings.TrimSuffix(minimumQualityFilter.Value, "p"))
+		if quality < minimumQuality {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -138,7 +155,6 @@ func renderRow(t shared.TorrentEntry) {
 	alternate = !alternate
 
 	fmt.Println(row)
-
 }
 
 // render verbose row
@@ -175,6 +191,9 @@ func renderVerboseRow(t shared.TorrentEntry) {
 func init() {
 	listCmd.Flags().StringVarP(&rangeFilter, "range", "r", "", "Show seasons in range, e.g. 10-20")
 	listCmd.Flags().StringVarP(&titleFilter, "title", "t", "", "Filter by title keyword")
+	listCmd.Flags().VarP(qualityFilter, "quality", "q", "Filter by quality, e.g. 1080p")
+	listCmd.Flags().Var(minimumQualityFilter, "minquality", "Filter by minimum quality, e.g. 720p will only list 720p and 1080p.")
+
 	listCmd.Flags().BoolVarP(&onlySpecials, "specials", "s", false, "Show only specials")
 	listCmd.Flags().BoolVarP(&verboseList, "verbose", "v", false, "Show full titles")
 	rootCmd.AddCommand(listCmd)
