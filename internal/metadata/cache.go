@@ -44,6 +44,9 @@ func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 	if err := enc.Encode(index); err != nil {
 		return fmt.Errorf("could not encode metadata index: %w", err)
 	}
+	if err := f.Sync(); err != nil {
+		return fmt.Errorf("could not flush metadata index to disk: %w", err)
+	}
 
 	metadataCache = index // cache immediately after saving
 

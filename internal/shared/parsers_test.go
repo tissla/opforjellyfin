@@ -49,3 +49,19 @@ func TestRoughExtractChapterFromTitle(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractChapterRangeFromNFO(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"Manga Chapter(s): 42, 22", "42-42"},
+	}
+
+	for _, tc := range tests {
+		got := ExtractChapterRangeFromNFO(tc.input)
+		if got != tc.expected {
+			t.Errorf("input %q: got %q, want %q", tc.input, got, tc.expected)
+		}
+	}
+}

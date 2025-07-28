@@ -106,6 +106,7 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 		// if first fails, extract specific chapterRange from fileName
 		chapterRange := shared.ExtractChapterRangeFromTitle(fileName)
 		if chapterRange == "" {
+			logger.Log(false, "findMetaDataMatch - trying rough extraction for: %s", fileName)
 			// use ogcr + file regex
 			// if this extraction fails, try rougher methods
 			seasonZ := shared.ExtractSeasonNumber(seasonFolderName)

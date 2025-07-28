@@ -29,6 +29,7 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 
 		season, episode, chapterRange := extractEpisodeMetadata(data)
 		if season == "" || episode == "" || chapterRange == "" {
+			logger.Log(false, "indexbuilder: missed param for %s - season: %s - episode %s - chapterRange %s", d.Name(), season, episode, chapterRange)
 			return nil
 		}
 
