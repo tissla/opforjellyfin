@@ -17,10 +17,10 @@ import (
 )
 
 func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
-	// based on testing, might need to change
+	// based on tests
 	const maxConcurrent = 5
 
-	// context (for ctrl C cancellation)
+	// Create a context that can be cancelled with Ctrl+C
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -32,6 +32,9 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 		logger.Log(true, "\n🛑 Received interrupt signal, cancelling downloads...")
 		cancel()
 	}()
+
+	// Load metadata index once
+	metadataIndex := metadata.LoadMetadataCache()
 
 	// Prepare all download metadata first
 	allTDs := []*shared.TorrentDownload{}
@@ -62,6 +65,9 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 	}
 	close(workQueue)
 
+	// Channel to collect placement results
+	placementResults := make(chan *shared.TorrentDownload, len(entries))
+
 	// Start worker goroutines
 	var wg sync.WaitGroup
 	for w := 0; w < maxConcurrent; w++ {
@@ -71,12 +77,16 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 			for i := range workQueue {
 				select {
 				case <-ctx.Done():
-					return
+					return // Exit if cancelled
 				default:
 					td := allTDs[i]
-					// 30 min timeout / download
+
+					// Download
 					downloadCtx, downloadCancel := context.WithTimeout(ctx, 30*time.Minute)
-					if err := StartTorrent(downloadCtx, td); err != nil {
+					err := StartTorrent(downloadCtx, td)
+					downloadCancel()
+
+					if err != nil {
 						if err == context.DeadlineExceeded {
 							logger.Log(true, "Download timeout for %s (no progress in 30 min)", td.Title)
 							td.PlacementProgress = "❌ Timeout - no seeders?"
@@ -87,49 +97,49 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 							td.PlacementProgress = "❌ Failed"
 						}
 						shared.SaveTorrentDownload(td)
+						placementResults <- td
+						continue
 					}
-					downloadCancel()
+
+					// Place immediately after download completes
+					tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
+					matcher.ProcessTorrentFiles(tmpDir, outDir, td, metadataIndex)
+
+					// Clean up temp directory immediately
+					if err := os.RemoveAll(tmpDir); err != nil {
+						logger.Log(false, "Failed to remove temp dir %s: %v", tmpDir, err)
+					}
+
+					placementResults <- td
 				}
 			}
 		}()
 	}
 
-	// Wait for all downloads to complete or context cancellation
-	downloadsDone := make(chan struct{})
+	// Collect results
 	go func() {
 		wg.Wait()
-		close(downloadsDone)
+		close(placementResults)
 	}()
 
-	select {
-	case <-downloadsDone:
-		// do nothing
-	case <-ctx.Done():
-		// when cancelled manually
-		logger.Log(true, "Waiting for downloads to stop...")
-		select {
-		case <-downloadsDone:
-		case <-time.After(5 * time.Second):
-			logger.Log(true, "Force stopping...")
-		}
+	// Collect all placement results
+	var placedTorrents []*shared.TorrentDownload
+	for td := range placementResults {
+		placedTorrents = append(placedTorrents, td)
 	}
 
-	// only place if not cancelled
-	if ctx.Err() == nil {
-		StartPlacement(allTDs, outDir)
-	}
-
-	// UI signal
+	// Signal UI that downloads are done
 	doneChan <- struct{}{}
 
-	// Wait for UI to finish (for a sec)
+	// Wait for UI to finish
 	select {
 	case <-doneChan:
 	case <-time.After(1 * time.Second):
+		// Don't wait forever for UI
 	}
 
 	// Print placement results
-	for _, td := range allTDs {
+	for _, td := range placedTorrents {
 		if len(td.PlacementFull) > 0 {
 			fmt.Printf("🎞️  %s\n", ui.AnsiPadRight(td.Title, 36, ".."))
 			for _, line := range td.PlacementFull {
@@ -144,15 +154,5 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 		logger.Log(true, "\n❌ Downloads cancelled by user.")
 	} else {
 		logger.Log(true, "\n✅ All downloads finished and placed.")
-	}
-}
-
-// sequential
-func StartPlacement(allTDs []*shared.TorrentDownload, outDir string) {
-	index := metadata.LoadMetadataCache()
-
-	for _, td := range allTDs {
-		tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
-		matcher.ProcessTorrentFiles(tmpDir, outDir, td, index)
 	}
 }

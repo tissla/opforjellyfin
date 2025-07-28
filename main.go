@@ -23,7 +23,7 @@ func main() {
 		context.Background(),
 		root,
 		fang.WithoutManpage(),
-		fang.WithVersion("1.0.0"),
+		fang.WithVersion("1.0.1"),
 		fang.WithoutCompletions(),
 	); err != nil {
 		os.Exit(1)

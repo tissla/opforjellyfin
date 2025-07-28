@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	quality  string
 	forceKey string
 )
 
@@ -61,7 +60,7 @@ var downloadCmd = &cobra.Command{
 			// sort
 			var match *shared.TorrentEntry
 			for _, t := range torrentList {
-				if t.DownloadKey == num && (quality == "" || t.Quality == quality) {
+				if t.DownloadKey == num {
 					if match == nil || t.Seeders > match.Seeders {
 						tmp := t
 						match = &tmp
@@ -71,7 +70,7 @@ var downloadCmd = &cobra.Command{
 
 			// no match for download-key
 			if match == nil {
-				logger.Log(true, "⚠️  No torrent found for key %d and quality '%s'", num, quality)
+				logger.Log(true, "⚠️  No torrent found for key %d", num)
 				continue
 			}
 
@@ -103,7 +102,6 @@ var downloadCmd = &cobra.Command{
 }
 
 func init() {
-	downloadCmd.Flags().StringVarP(&quality, "quality", "Q", "", "Only download with specific quality (e.g. 1080p)")
 	downloadCmd.Flags().StringVar(&forceKey, "forcekey", "", "Override chapter range (only for single downloadKey)")
 
 	rootCmd.AddCommand(downloadCmd)
