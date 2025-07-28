@@ -4,6 +4,8 @@ opfor-linux
 opfor-macos
 opfor.exe
 
+build.sh
+
 *.log
 
 config.json
