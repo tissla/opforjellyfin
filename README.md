@@ -10,6 +10,18 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 ---
 
+## 📢 NEWS 
+
+# Current known issues (v1.0.1):
+
+Since removing the waitgroup for sorting and allowing each file to be sorted individiually at the end of their downloadprocess, there's an issue with file placement being inconsistent.
+The same file can at one attempt be placed correctly, and at the second be placed in "strayvideos". Leading me to believe there's some non-deterministic parsing going on somewhere.
+I plan to fix this problem when time allows.
+
+# Future plans:
+
+Planning to implement the 'sort <directory>' command, that uses the 'place and sort'-algorithm on the chosen directory.
+
 ## 📸 Examples
 
 1. Example command:
