@@ -77,8 +77,9 @@ type TorrentEntry struct {
 	TorrentLink   string // torrent link
 	TorrentID     int    // torrent ID, extracted from link
 	ChapterRange  string // torrent chapter range
-	MetaDataAvail bool
-	IsSpecial     bool
-	HaveIt        int
-	Date          string
+	MetaDataAvail bool   // metadata matching chapter range exists
+	IsSpecial     bool   // is a special (no chapter range)
+	HaveIt        int    // video with same chapter range exists
+	Date          string //
+	IsExtended    bool   // extended version
 }
