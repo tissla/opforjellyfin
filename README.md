@@ -10,17 +10,25 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 ---
 
-## 📢 NEWS 
+# 📢 NEWS 
 
-# Current known issues (v1.0.1):
+## Current known issues (v1.0.1):
 
-Since removing the waitgroup for sorting and allowing each file to be sorted individiually at the end of their downloadprocess, there's an issue with file placement being inconsistent.
-The same file can at one attempt be placed correctly, and at the second be placed in "strayvideos". Leading me to believe there's some non-deterministic parsing going on somewhere.
-I plan to fix this problem when time allows.
+### Videos getting sorted into strayfolder?
+There are some issues with concurrency due to workers simultaneously trying to create directories. 
+This is fixed for next release.
 
-# Future plans:
+### Have-tag not working?
+The Have-tag does not work for bundles in this release. This is due to a misnamed variable. 
+This is fixed for next release.
 
-Planning to implement the 'sort <directory>' command, that uses the 'place and sort'-algorithm on the chosen directory.
+## Future plans:
+
+1. 'sort' command - To target a directory containing files, and renaming/sorting them into your metadata directory.
+
+2. Cache for downloadKeys. This will prevent mismatches between 'list' and 'download'.
+
+3. Seeder-mode.
 
 ## 📸 Examples
 
