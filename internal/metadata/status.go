@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ func HaveVideoStatus(chapterRange string) int {
 
 		if seasonKey == chapterRange {
 			v, n := CountVideosAndTotal(seasonDir)
+			logger.Log(false, "HaveVideoStatus: counted %d videos and %d nfos for seasonKey: %s", v, n, seasonKey)
 			if v < n {
 				return 0
 			}

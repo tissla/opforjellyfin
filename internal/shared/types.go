@@ -27,6 +27,7 @@ type ScraperFields struct {
 	Seeders     string `json:"seeders"`
 	TorrentLink string `json:"torrent_link"`
 	TorrentID   string `json:"torrent_id"`
+	UploadDate  string `json:"upload_date"`
 }
 
 type ValidationConfig struct {
@@ -79,4 +80,5 @@ type TorrentEntry struct {
 	MetaDataAvail bool
 	IsSpecial     bool
 	HaveIt        int
+	Date          string
 }

@@ -139,7 +139,7 @@ func renderRow(t shared.TorrentEntry) {
 	truncatedTitle := ui.AnsiPadRight(t.TorrentName, 30)
 
 	row := ui.RenderRow(
-		"%s - %s: %s Have? %s | Meta: %s | %-9s | %s | %s seeders",
+		"%s - %s: %s Have? %s | Meta: %s | %-9s | %s | %s seeders | %s",
 		alternate,
 		ui.StyleFactory("DKEY", ui.Style.LBlue),
 		ui.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), ui.Style.Pink),
@@ -149,6 +149,7 @@ func renderRow(t shared.TorrentEntry) {
 		t.ChapterRange,
 		ui.AnsiPadLeft(ui.StyleByRange(t.Quality, 400, 1000), 5),
 		ui.AnsiPadLeft(ui.StyleByRange(t.Seeders, 0, 10), 3),
+		t.Date,
 	)
 
 	// set flag
@@ -173,7 +174,7 @@ func renderVerboseRow(t shared.TorrentEntry) {
 	fullTitle := ui.AnsiPadRight(t.Title, 60)
 
 	row := ui.RenderRow(
-		"%s - %s: %s H:%s M:%s | %s seeders",
+		"%s - %s: %s H:%s M:%s | %s seeders | %s",
 		alternate,
 		ui.StyleFactory("DKEY", ui.Style.LBlue),
 		ui.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), ui.Style.Pink),
@@ -181,6 +182,7 @@ func renderVerboseRow(t shared.TorrentEntry) {
 		haveMark,
 		metaMark,
 		ui.AnsiPadLeft(ui.StyleByRange(t.Seeders, 0, 10), 3),
+		t.Date,
 	)
 
 	alternate = !alternate

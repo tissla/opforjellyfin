@@ -76,6 +76,7 @@ func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string
 	title := s.Find(config.Fields.Title).Text()
 	seedersStr := s.Find(config.Fields.Seeders).Text()
 	torrentLink, _ := s.Find(config.Fields.TorrentLink).Attr("href")
+	date := s.Find(config.Fields.UploadDate).Text()
 
 	// Validate based on config
 	if config.Validation.RequiredInTitle != "" {
@@ -110,6 +111,10 @@ func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string
 		torrentLink = baseURL + torrentLink
 	}
 
+	metaDataAvail := metadata.HaveMetadata(chapterRange)
+
+	videoStatus := metadata.HaveVideoStatus(chapterRange)
+
 	return shared.TorrentEntry{
 		Title:         title,
 		Quality:       quality,
@@ -120,8 +125,9 @@ func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string
 		TorrentID:     torrentID,
 		ChapterRange:  chapterRange,
 		IsSpecial:     chapterRange == "",
-		MetaDataAvail: metadata.HaveMetadata(chapterRange),
-		HaveIt:        metadata.HaveVideoStatus(chapterRange),
+		MetaDataAvail: metaDataAvail,
+		HaveIt:        videoStatus,
+		Date:          date,
 	}, true
 }
 
