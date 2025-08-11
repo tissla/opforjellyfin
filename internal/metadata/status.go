@@ -21,13 +21,18 @@ func HaveVideoStatus(chapterRange string) int {
 	for seasonKey, season := range index.Seasons {
 		seasonDir := filepath.Join(baseDir, seasonKey)
 
-		if seasonKey == chapterRange {
+		if season.Range == chapterRange {
 			v, n := CountVideosAndTotal(seasonDir)
 			logger.Log(false, "HaveVideoStatus: counted %d videos and %d nfos for seasonKey: %s", v, n, seasonKey)
-			if v < n {
+			if v == 0 {
 				return 0
 			}
-			return 1
+
+			if v < n {
+				return 1
+			}
+
+			return 2
 		}
 
 		for epRange, epData := range season.EpisodeRange {
