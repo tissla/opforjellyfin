@@ -13,6 +13,7 @@ import (
 )
 
 // Matches video-file to metadata, then places it
+// No mutex needed here - shared.SafeMoveFile handles all locking
 func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataIndex, ogcr string) (string, error) {
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
@@ -34,12 +35,13 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 
 	var msg string
 
+	// SafeMoveFile now handles all locking internally
 	if err := shared.SafeMoveFile(videoPath, finalPath); err != nil {
 		logger.Log(false, "sfm Error: %s, moving to strayvideos", err)
 
-		// Create strayvideos directory
+		// Create strayvideos directory using the thread-safe function
 		strayDir := filepath.Join(defaultDir, "strayvideos")
-		if err := os.MkdirAll(strayDir, 0755); err != nil {
+		if err := shared.CreateDirectory(strayDir); err != nil {
 			logger.Log(true, "Failed to create strayvideos directory: %v", err)
 			return "", fmt.Errorf("failed to create strayvideos: %w", err)
 		}
@@ -50,6 +52,7 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 		strayFileName := fmt.Sprintf("%s_%s%s", nameWithoutExt, timestamp, ext)
 		strayPath := filepath.Join(strayDir, strayFileName)
 
+		// SafeMoveFile handles locking
 		if err := shared.SafeMoveFile(videoPath, strayPath); err != nil {
 			logger.Log(true, "Failed to move to strayvideos: %v", err)
 			return "", fmt.Errorf("failed to place file anywhere: %w", err)
