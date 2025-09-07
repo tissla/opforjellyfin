@@ -40,6 +40,11 @@ func ExtractChapterRangeFromTitle(title string) string {
 
 // extracts the two ints separated by "-"
 func ParseRange(r string) (int, int) {
+	// if no dash exists, it should be a range of a single number
+	if !strings.Contains(r, "-") {
+		a, _ := strconv.Atoi(r)
+		return a, a
+	}
 	parts := strings.Split(r, "-")
 	if len(parts) != 2 {
 		return -1, -1

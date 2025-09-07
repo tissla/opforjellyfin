@@ -39,6 +39,18 @@ type MetadataIndex struct {
 	Seasons map[string]SeasonIndex `json:"seasons"`
 }
 
+type SortedMetadataIndex struct {
+	Seasons []SeasonEntry `json:"seasons"`
+}
+
+// used for sorting MetadataIndex.Seasons
+// Title is equivalent to the key in the map
+// SeasonIndex is the associated value
+type SeasonEntry struct {
+	Title       string      `json:"title"`
+	SeasonIndex SeasonIndex `json:"index"`
+}
+
 // seasons maps episodes
 type SeasonIndex struct {
 	Range        string                 `json:"range"`
