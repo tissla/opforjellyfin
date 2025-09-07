@@ -96,47 +96,66 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 	strayfolder := filepath.Join(baseDir, "strayvideos", ogcr, fileName)
 	// finds season containing chapterRange, returns the seasonFolderName and seasonIndex
 	// uses ogcr to find correct season even if its a bundle
-	seasonFolderName, seasonIndex := findSeasonForChapter(ogcr, index)
-	if seasonFolderName == "" {
-		logger.Log(false, "findMetaDataMatch: failed to find Season-folder")
-		return strayfolder
-	}
-	logger.Log(false, "season found for: %s for range %s", seasonFolderName, ogcr)
+	seasonStartIdx := -1
+	newFileName := ""
+	seasonDir := ""
 
-	// searches the seasonIndex for matching title for chapterRange, tries ogcr first for single-episode seasons
-	newFileName := findTitleForChapter(ogcr, seasonIndex)
-	if newFileName == "" {
-		// if first fails, extract specific chapterRange from fileName
-		chapterRange := shared.ExtractChapterRangeFromTitle(fileName)
-		if chapterRange == "" {
-			logger.Log(false, "findMetaDataMatch - trying rough extraction for: %s", fileName)
-			// use ogcr + file regex
-			// if this extraction fails, try rougher methods
-			seasonZ := shared.ExtractSeasonNumber(seasonFolderName)
-			seasonNum := fmt.Sprintf("%02s", seasonZ)
+	sortedIndex := shared.SortMetadataSeasons(index)
 
-			// rough extract can find chapterRange or rough chapter(in relation to season) if lucky.
-			chapterNum, isRange := shared.RoughExtractChapterFromTitle(fileName)
-			logger.Log(false, "findMetaDataMatch - rough extracted chapterNum: %s", chapterNum)
+	// loop to repeat season lookups on episode match failures
+	// some seasons have overlapping chapters (i.e. The Trials of Koby-Meppo cover pages span Ch. 83-119)
+	for seasonStartIdx < len(sortedIndex.Seasons) {
 
-			if isRange {
-				newFileName = findTitleForChapter(chapterNum, seasonIndex)
+		seasonFolderName, seasonIndex, startIdx := findSeasonForChapter(ogcr, sortedIndex, seasonStartIdx)
+		seasonStartIdx = startIdx
+
+		if seasonFolderName == "" {
+			logger.Log(false, "findMetaDataMatch: failed to find Season-folder")
+			return strayfolder
+		}
+		logger.Log(false, "season found for: %s for range %s", seasonFolderName, ogcr)
+
+		// searches the seasonIndex for matching title for chapterRange, tries ogcr first for single-episode seasons
+		newFileName = findTitleForChapter(ogcr, seasonIndex)
+		if newFileName == "" {
+			// if first fails, extract specific chapterRange from fileName
+			chapterRange := shared.ExtractChapterRangeFromTitle(fileName)
+			if chapterRange == "" {
+				logger.Log(false, "findMetaDataMatch - trying rough extraction for: %s", fileName)
+				// use ogcr + file regex
+				// if this extraction fails, try rougher methods
+				seasonZ := shared.ExtractSeasonNumber(seasonFolderName)
+				seasonNum := fmt.Sprintf("%02s", seasonZ)
+
+				// rough extract can find chapterRange or rough chapter(in relation to season) if lucky.
+				chapterNum, isRange := shared.RoughExtractChapterFromTitle(fileName)
+				logger.Log(false, "findMetaDataMatch - rough extracted chapterNum: %s", chapterNum)
+
+				if isRange {
+					newFileName = findTitleForChapter(chapterNum, seasonIndex)
+				} else {
+					// build a matching string from season and rough chapter, eg: seasonNum = 3 and chapternum = 05 => S03E05
+					epKey := fmt.Sprintf("S%sE%s", seasonNum, chapterNum)
+					newFileName = findTitleRough(epKey, seasonIndex)
+				}
 			} else {
-				// build a matching string from season and rough chapter, eg: seasonNum = 3 and chapternum = 05 => S03E05
-				epKey := fmt.Sprintf("S%sE%s", seasonNum, chapterNum)
-				newFileName = findTitleRough(epKey, seasonIndex)
+				// if extraction succeeded, find title from chapterRange
+				newFileName = findTitleForChapter(chapterRange, seasonIndex)
 			}
 		} else {
-			// if extraction succeeded, find title from chapterRange
-			newFileName = findTitleForChapter(chapterRange, seasonIndex)
+			logger.Log(false, "Title match found: ChapterKey: %s - EpisodeTitle: %s", ogcr, fileName)
 		}
-	} else {
-		logger.Log(false, "Title match found: ChapterKey: %s - EpisodeTitle: %s", ogcr, fileName)
+
+		seasonDir = filepath.Join(baseDir, seasonFolderName)
+
+		if newFileName == "" {
+			logger.Log(false, "Could not determine episode title, restarting season lookup")
+			continue
+		}
+		// found a valid episode title for the matched season
+		break
 	}
-
-	seasonDir := filepath.Join(baseDir, seasonFolderName)
-
-	if newFileName == "" {
+	if newFileName == "" || seasonDir == "" {
 		logger.Log(false, "Could not determine episode title, sending to stray")
 		return strayfolder
 	}
@@ -153,29 +172,35 @@ func findTitleForChapter(chapterKey string, sindex shared.SeasonIndex) string {
 	logger.Log(false, "findEpisodeKeyForChapter: chapterKey: %s - normKey: %s ", chapterKey, normKey)
 
 	for epRange, ep := range sindex.EpisodeRange {
-		if shared.NormalizeDash(epRange) == normKey {
+		epKey := shared.NormalizeDash(epRange)
+		logger.Log(false, "checkingTitle for chapter[%s]: [%s]", normKey, epKey)
+		if epKey == normKey {
+			logger.Log(false, "foundTitle for chapter[%s]: [%s] - %s", normKey, epKey, ep.Title)
 			return ep.Title
 		}
 	}
+
+	logger.Log(false, "findTitleForChapter no title found from chapterKey: %s", chapterKey)
 
 	// no title found based on ChapterKey,
 	return ""
 }
 
 // finds the season a ChapterKey belongs to. returns the season name as a string, also returns the whole SeasonIndex struct
-func findSeasonForChapter(chapterKey string, index *shared.MetadataIndex) (string, shared.SeasonIndex) {
+func findSeasonForChapter(chapterKey string, index *shared.SortedMetadataIndex, startIdx int) (string, shared.SeasonIndex, int) {
 	chStart, chEnd := shared.ParseRange(chapterKey)
 
-	for seasonName, season := range index.Seasons {
-		seasonStart, seasonEnd := shared.ParseRange(season.Range)
+	// loop through seasons offset by startIdx
+	for idx, season := range index.Seasons[startIdx+1:] {
+		seasonStart, seasonEnd := shared.ParseRange(season.SeasonIndex.Range)
 
 		if chStart >= seasonStart && chEnd <= seasonEnd {
-			return seasonName, season
+			logger.Log(false, "foundSeason from channel[%d-%d]: %s [%d-%d]", chStart, chEnd, season.Title, seasonStart, seasonEnd)
+			return season.Title, season.SeasonIndex, idx + startIdx + 1
 		}
 	}
 
-	return "", shared.SeasonIndex{}
-
+	return "", shared.SeasonIndex{}, -1
 }
 
 // rough finder
