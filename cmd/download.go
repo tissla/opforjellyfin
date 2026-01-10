@@ -31,7 +31,7 @@ var downloadCmd = &cobra.Command{
 			return
 		}
 
-		cfg := shared.LoadConfig()
+		cfg, _ := shared.LoadConfig()
 		if cfg.TargetDir == "" {
 			logger.Log(true, "⚠️ No target directory set. Use 'setDir <path>' first.")
 			return

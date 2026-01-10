@@ -18,7 +18,7 @@ import (
 // TODO: sort file, add more structs, add scrape-map
 
 // gets the torrents using current config, throws error if no valid config found
-func FetchTorrents(cfg shared.Config) ([]shared.TorrentEntry, error) {
+func FetchTorrents(cfg *shared.Config) ([]shared.TorrentEntry, error) {
 	//prep
 
 	// use scraper config from main config

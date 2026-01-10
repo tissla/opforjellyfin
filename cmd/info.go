@@ -27,7 +27,7 @@ var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Show current configuration and library status",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := shared.LoadConfig()
+		cfg, _ := shared.LoadConfig()
 		fmt.Println("🔧 Current Configuration:")
 		fmt.Printf("📂 Target Directory: %s\n", cfg.TargetDir)
 

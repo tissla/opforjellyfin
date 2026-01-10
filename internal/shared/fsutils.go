@@ -17,7 +17,10 @@ var (
 
 // helper for tempdir
 func GetTempDir() (string, error) {
-	cfg := LoadConfig()
+	cfg, err := LoadConfig()
+	if err != nil {
+		return "", err
+	}
 
 	if cfg.TargetDir == "" {
 		return "", errors.New("No target dir set")
@@ -29,7 +32,7 @@ func GetTempDir() (string, error) {
 	}
 
 	//create if not exists
-	err := os.MkdirAll(tmpDir, 0755)
+	err = os.MkdirAll(tmpDir, 0755)
 	if err != nil {
 		return "", err
 	}

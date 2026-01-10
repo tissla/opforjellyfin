@@ -34,7 +34,7 @@ var listCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		spinner := ui.NewMultirowSpinner(ui.Animations["Searcher"], 4)
 
-		cfg := shared.LoadConfig()
+		cfg, _ := shared.LoadConfig()
 
 		if cfg.Source.BaseURL == "" {
 			spinner.Stop()

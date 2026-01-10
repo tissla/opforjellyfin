@@ -18,7 +18,7 @@ var (
 // returns a reference to the index-variable
 func LoadMetadataCache() *shared.MetadataIndex {
 	metadataCacheOnce.Do(func() {
-		cfg := shared.LoadConfig()
+		cfg, _ := shared.LoadConfig()
 		data, err := os.ReadFile(filepath.Join(cfg.TargetDir, "metadata-index.json"))
 		if err != nil {
 			metadataCache = &shared.MetadataIndex{}

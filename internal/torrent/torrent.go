@@ -15,8 +15,13 @@ import (
 
 // main torrent download and tracker
 func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
+	config, err := shared.LoadConfig()
+	if err != nil {
+		return err
+	}
+	srcBaseURL := config.Source.BaseURL
 	// get torrent meta-info
-	torrentURL := fmt.Sprintf("%s/download/%d.torrent", shared.LoadConfig().Source.BaseURL, td.TorrentID)
+	torrentURL := fmt.Sprintf("%s/download/%d.torrent", srcBaseURL, td.TorrentID)
 	logger.Log(false, "Fetching torrent: %s, ID: %s", torrentURL, td)
 
 	// get metadata

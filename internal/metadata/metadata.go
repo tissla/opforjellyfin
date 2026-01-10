@@ -2,13 +2,11 @@
 package metadata
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
-	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 )
@@ -24,17 +22,19 @@ func BuildMetadataIndex(baseDir string) error {
 }
 
 // FetchAllMetadata clones and indexes metadata from GitHub.
-func FetchAllMetadata(baseDir string, cfg shared.Config) error {
-	return cloneAndCopyRepo(baseDir, cfg, false)
+func FetchAllMetadata(cfg *shared.Config) error {
+	return cloneAndCopyRepo(cfg, false)
 }
 
 // SyncMetadata clones and syncs metadata updates from GitHub.
-func SyncMetadata(baseDir string, cfg shared.Config) error {
-	return cloneAndCopyRepo(baseDir, cfg, true)
+func SyncMetadata(cfg *shared.Config) error {
+	return cloneAndCopyRepo(cfg, true)
 }
 
 // Main dataobtainer, builds or rebuilds index when complete.
-func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
+func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
+
+	baseDir := cfg.TargetDir
 
 	tmpBase, err := shared.GetTempDir()
 	if err != nil {
@@ -52,7 +52,7 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 	if err = exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
 		spinner.Stop()
 		fmt.Println("⚠️  Git clone failed: %w", err)
-		return fmt.Errorf("git clone failed: %w", err)
+		return err
 	}
 
 	srcDir := filepath.Join(tmpDir, "One Pace")
@@ -65,15 +65,15 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	if err != nil {
 		spinner.Stop()
-		return fmt.Errorf("failed to copy metadata: %w", err)
+		return err
 	}
 
 	if err := BuildMetadataIndex(baseDir); err != nil {
 		spinner.Stop()
-		return fmt.Errorf("failed to build metadata index: %w", err)
+		return err
 	}
 
-	updateConfig(tmpDir, cfg)
+	shared.SaveConfig(*cfg)
 
 	spinner.Stop()
 
@@ -82,18 +82,4 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	fmt.Println("✅ Metadata fetch and indexing complete.")
 	return nil
-}
-
-func updateConfig(tmpDir string, cfg shared.Config) {
-	cfgFile := filepath.Join(tmpDir, "config.json")
-
-	data, _ := os.ReadFile(cfgFile)
-
-	var srcConfig shared.ScraperConfig
-	if err := json.Unmarshal(data, &srcConfig); err != nil {
-		logger.Log(false, "Error updating source config: %v", err)
-	}
-
-	cfg.Source = srcConfig
-	shared.SaveConfig(cfg)
 }

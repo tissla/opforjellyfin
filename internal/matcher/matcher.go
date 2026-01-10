@@ -89,7 +89,7 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 // returns directory to place file, without suffix
 func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string) string {
 
-	cfg := shared.LoadConfig()
+	cfg, _ := shared.LoadConfig()
 	baseDir := cfg.TargetDir
 
 	// strayfolder for unmatched videos

@@ -15,7 +15,7 @@ func HaveVideoStatus(chapterRange string) int {
 	}
 
 	index := LoadMetadataCache()
-	cfg := shared.LoadConfig()
+	cfg, _ := shared.LoadConfig()
 	baseDir := cfg.TargetDir
 
 	for seasonKey, season := range index.Seasons {

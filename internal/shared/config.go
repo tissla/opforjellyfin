@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 var defaultCfg = Config{
@@ -13,36 +14,53 @@ var defaultCfg = Config{
 	GitHubRepo: "tissla/one-pace-jellyfin",
 }
 
+var (
+	globalConfig    *Config
+	configLoadOnce  sync.Once
+	configLoadError error
+)
+
 // loads config-file file, creates it if it does not exist
-func LoadConfig() Config {
+func LoadConfig() (*Config, error) {
 
-	path := EnsureConfigExists()
+	configLoadOnce.Do(func() {
+		path := EnsureConfigExists()
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatalf("config: could not read config: %v", err)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			configLoadError = err
+		}
+
+		var cfg Config
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			configLoadError = err
+		}
+		globalConfig = &cfg
+	})
+
+	if configLoadError != nil {
+		return nil, configLoadError
 	}
 
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		log.Fatalf("config: invalid config format: %v", err)
-	}
-
-	return cfg
+	return globalConfig, nil
 }
 
 // writes static config file from config object, as json
-func SaveConfig(cfg Config) {
+func SaveConfig(cfg Config) error {
 	path := getConfigPath()
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		log.Fatalf("config: failed to serialize config: %v", err)
+		return err
 	}
 
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		log.Fatalf("config: failed to save config: %v", err)
+		return err
 	}
+
+	globalConfig = &cfg
+
+	return nil
 }
 
 // creates default config if no config-file is found
