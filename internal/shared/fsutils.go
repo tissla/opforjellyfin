@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"opforjellyfin/internal/logger"
@@ -14,12 +15,39 @@ var (
 	dirMutex sync.Mutex
 )
 
+// helper for tempdir
+func GetTempDir() (string, error) {
+	cfg := LoadConfig()
+
+	if cfg.TargetDir == "" {
+		return "", errors.New("No target dir set")
+	}
+	tmpDir := filepath.Join(cfg.TargetDir, ".opfor-tmp")
+
+	if _, err := os.Stat(tmpDir); err == nil {
+		return tmpDir, nil
+	}
+
+	//create if not exists
+	err := os.MkdirAll(tmpDir, 0755)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpDir, nil
+
+}
+
 // CreateTempTorrentDir safely creates a temporary directory for torrent downloads
 func CreateTempTorrentDir(torrentID int) (string, error) {
 	dirMutex.Lock()
 	defer dirMutex.Unlock()
 
-	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", torrentID))
+	tmpBase, err := GetTempDir()
+	if err != nil {
+		return "", err
+	}
+	tmpDir := filepath.Join(tmpBase, fmt.Sprintf("opfor-tmp-%d", torrentID))
 
 	// Check if it already exists
 	if info, err := os.Stat(tmpDir); err == nil && info.IsDir() {
@@ -28,7 +56,7 @@ func CreateTempTorrentDir(torrentID int) (string, error) {
 	}
 
 	// Create with MkdirAll (safe for concurrent calls)
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+	if err = os.MkdirAll(tmpDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}
 
@@ -37,34 +65,34 @@ func CreateTempTorrentDir(torrentID int) (string, error) {
 }
 
 // SafeMoveFile moves a file safely, creates the directory if it does not exist
-// This function is thread-safe and handles concurrent file operations
+// This function should be thread-safe and handle concurrent file operations
 func SafeMoveFile(src, dst string) error {
 	// Lock for the entire move operation to ensure atomicity
 	dirMutex.Lock()
 	defer dirMutex.Unlock()
 
-	logger.Log(false, "sfm: starting move from %s to %s", src, dst)
+	logger.Log(false, "smf: starting move from %s to %s", src, dst)
 
 	// Ensure destination directory exists
 	dstDir := filepath.Dir(dst)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		logger.Log(true, "sfm: failed to create dst dir: %v", err)
+		logger.Log(true, "smf: failed to create dst dir: %v", err)
 		return err
 	}
 
-	logger.Log(false, "sfm: copying file from %s to %s", src, dst)
+	logger.Log(false, "smf: copying file from %s to %s", src, dst)
 	if err := copyFileInternal(src, dst, 0644); err != nil {
-		logger.Log(true, "sfm: copyFile failed: %v", err)
+		logger.Log(true, "smf: copyFile failed: %v", err)
 		return err
 	}
-	logger.Log(false, "sfm: copyFile succeeded")
+	logger.Log(false, "smf: copyFile succeeded")
 
-	logger.Log(false, "sfm: removing source file: %s", src)
+	logger.Log(false, "smf: removing source file: %s", src)
 	if err := os.Remove(src); err != nil {
-		logger.Log(true, "sfm: failed to remove src: %v", err)
+		logger.Log(true, "smf: failed to remove src: %v", err)
 		return err
 	}
-	logger.Log(false, "sfm: source file removed")
+	logger.Log(false, "smf: source file removed")
 
 	return nil
 }

@@ -35,7 +35,12 @@ func SyncMetadata(baseDir string, cfg shared.Config) error {
 
 // Main dataobtainer, builds or rebuilds index when complete.
 func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
-	tmpDir := filepath.Join(os.TempDir(), "repo-tmp")
+
+	tmpBase, err := shared.GetTempDir()
+	if err != nil {
+		return err
+	}
+	tmpDir := filepath.Join(tmpBase, "repo-tmp")
 	defer os.RemoveAll(tmpDir)
 
 	repo := fmt.Sprintf("https://github.com/%s.git", cfg.GitHubRepo)
@@ -44,14 +49,13 @@ func cloneAndCopyRepo(baseDir string, cfg shared.Config, syncOnly bool) error {
 
 	spinner := ui.NewSpinner("🗃️ Downloading.. ", ui.Animations["MetaFetcher"])
 
-	if err := exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
+	if err = exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
 		spinner.Stop()
 		fmt.Println("⚠️  Git clone failed: %w", err)
 		return fmt.Errorf("git clone failed: %w", err)
 	}
 
 	srcDir := filepath.Join(tmpDir, "One Pace")
-	var err error
 
 	if syncOnly {
 		err = shared.SyncDir(srcDir, baseDir)

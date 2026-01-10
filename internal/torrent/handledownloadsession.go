@@ -101,8 +101,12 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 						continue
 					}
 
+					tmpBase, err := shared.GetTempDir()
+					if err != nil {
+						logger.Log(false, "failed to find temp dir: %v", err)
+					}
 					// Place immediately after download completes
-					tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
+					tmpDir := filepath.Join(tmpBase, fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
 					matcher.ProcessTorrentFiles(tmpDir, outDir, td, metadataIndex)
 
 					// Clean up temp directory immediately

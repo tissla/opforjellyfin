@@ -53,13 +53,14 @@ func ClearActiveDownloads() {
 }
 
 func CleanupTempDirs() error {
-	files, err := os.ReadDir(os.TempDir())
+	tmpDir, _ := GetTempDir()
+	files, err := os.ReadDir(tmpDir)
 	if err != nil {
 		return err
 	}
 	for _, f := range files {
 		if strings.HasPrefix(f.Name(), "opfor-tmp-") {
-			path := filepath.Join(os.TempDir(), f.Name())
+			path := filepath.Join(tmpDir, f.Name())
 			if err := os.RemoveAll(path); err != nil {
 				fmt.Printf("⚠️  Failed to remove %s: %v\n", path, err)
 			}
