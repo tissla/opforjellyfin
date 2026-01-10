@@ -41,9 +41,9 @@ var downloadCmd = &cobra.Command{
 			logger.Log(true, "No valid scraper configuration found. Please run 'sync'")
 		}
 
-		torrentList, err := scraper.FetchTorrents(cfg)
+		searchCache, err := scraper.LoadSearchCache()
 		if err != nil {
-			logger.Log(true, "❌ Error scraping torrents. Site inaccessible? %v", err)
+			logger.Log(true, "❌ Error loading search cache. Did you run 'list'? - %v", err)
 			return
 		}
 
@@ -59,7 +59,7 @@ var downloadCmd = &cobra.Command{
 
 			// sort
 			var match *shared.TorrentEntry
-			for _, t := range torrentList {
+			for _, t := range searchCache.Results {
 				if t.DownloadKey == num {
 					if match == nil || t.Seeders > match.Seeders {
 						tmp := t

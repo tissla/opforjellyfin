@@ -2,23 +2,18 @@ package scraper
 
 import (
 	"encoding/json"
+	"opforjellyfin/internal/shared"
 	"os"
 )
 
 type SearchCache struct {
-	Results []TorrentResult `json:"results"`
-}
-
-type TorrentResult struct {
-	Title       string
-	DownloadKey int
-	TorrentLink string
+	Results []shared.TorrentEntry `json:"results"`
 }
 
 const CacheFile = ".search_cache.json"
 
 // saves the current search results to cache, returns error if failed
-func SaveSearchCache(results []TorrentResult) error {
+func SaveSearchCache(results []shared.TorrentEntry) error {
 	cache := SearchCache{
 		Results: results,
 	}
@@ -48,7 +43,7 @@ func LoadSearchCache() (*SearchCache, error) {
 }
 
 // tries to find the torrent by key, returns result and error
-func GetTorrentByKey(key int) (*TorrentResult, error) {
+func GetTorrentByKey(key int) (*shared.TorrentEntry, error) {
 	cache, err := LoadSearchCache()
 	if err != nil {
 		return nil, err

@@ -168,17 +168,8 @@ func processEntries(rawEntries []shared.TorrentEntry) []shared.TorrentEntry {
 		}
 	}
 
-	results := make([]TorrentResult, 0, len(filtered))
-	for _, res := range filtered {
-		tRes := TorrentResult{
-			Title:       res.Title,
-			DownloadKey: res.DownloadKey,
-			TorrentLink: res.TorrentLink,
-		}
-		results = append(results, tRes)
-	}
 	// save to cache
-	err := SaveSearchCache(results)
+	err := SaveSearchCache(filtered)
 	if err != nil {
 		logger.Log(false, "Failed to cache")
 	}
