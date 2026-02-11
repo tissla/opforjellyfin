@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/scraper"
@@ -49,13 +48,16 @@ var downloadCmd = &cobra.Command{
 
 		// stop spinner
 		spinner.Stop()
+
+		// Parse arguments with range support (e.g., "10 11-15 20")
+		downloadKeys, err := shared.ParseIntListWithRanges(args)
+		if err != nil {
+			logger.Log(true, "❌ Invalid syntax: %v", args)
+			return
+		}
+
 		var matches []shared.TorrentEntry
-		for _, arg := range args {
-			num, err := strconv.Atoi(arg)
-			if err != nil {
-				logger.Log(true, "❌ Invalid syntax: %s", arg)
-				return
-			}
+		for _, num := range downloadKeys {
 
 			// sort
 			var match *shared.TorrentEntry
