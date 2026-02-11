@@ -130,3 +130,41 @@ func NormalizeDash(s string) string {
 	// Replace en-dash and em-dash with hyphen-minus
 	return strings.NewReplacer("–", "-", "—", "-").Replace(s)
 }
+
+// ParseIntListWithRanges parses a list of arguments that can be integers or ranges.
+// e.g. ["10", "11-15", "20"] returns [10, 11, 12, 13, 14, 15, 20], nil
+func ParseIntListWithRanges(args []string) ([]int, error) {
+	var result []int
+	for _, arg := range args {
+		arg = NormalizeDash(arg)
+		if strings.Contains(arg, "-") {
+			// It's a range
+			parts := strings.Split(arg, "-")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid range syntax: %s", arg)
+			}
+			start, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+			if err != nil {
+				return nil, fmt.Errorf("invalid range start: %s", arg)
+			}
+			end, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if err != nil {
+				return nil, fmt.Errorf("invalid range end: %s", arg)
+			}
+			if start > end {
+				return nil, fmt.Errorf("invalid range: start > end in %s", arg)
+			}
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+		} else {
+			// Single integer
+			num, err := strconv.Atoi(strings.TrimSpace(arg))
+			if err != nil {
+				return nil, fmt.Errorf("invalid number: %s", arg)
+			}
+			result = append(result, num)
+		}
+	}
+	return result, nil
+}
