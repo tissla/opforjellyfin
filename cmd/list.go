@@ -24,6 +24,7 @@ var (
 
 	onlySpecials bool
 	verboseList  bool
+	newestFirst  bool
 
 	alternate bool
 )
@@ -57,13 +58,22 @@ var listCmd = &cobra.Command{
 			}
 		}
 
-		// Sort by DownloadKey, then seeders descending
-		sort.SliceStable(filtered, func(i, j int) bool {
-			if filtered[i].DownloadKey == filtered[j].DownloadKey {
-				return filtered[i].Seeders > filtered[j].Seeders
-			}
-			return filtered[i].DownloadKey < filtered[j].DownloadKey
-		})
+		// Sort by date descending if --newest, otherwise by DownloadKey
+		if newestFirst {
+			sort.SliceStable(filtered, func(i, j int) bool {
+				if filtered[i].Date == filtered[j].Date {
+					return filtered[i].Seeders > filtered[j].Seeders
+				}
+				return filtered[i].Date > filtered[j].Date
+			})
+		} else {
+			sort.SliceStable(filtered, func(i, j int) bool {
+				if filtered[i].DownloadKey == filtered[j].DownloadKey {
+					return filtered[i].Seeders > filtered[j].Seeders
+				}
+				return filtered[i].DownloadKey < filtered[j].DownloadKey
+			})
+		}
 
 		spinner.Stop()
 
@@ -198,5 +208,6 @@ func init() {
 
 	listCmd.Flags().BoolVarP(&onlySpecials, "specials", "s", false, "Show only specials")
 	listCmd.Flags().BoolVarP(&verboseList, "verbose", "v", false, "Show full titles")
+	listCmd.Flags().BoolVarP(&newestFirst, "newest", "n", false, "Sort by date, newest first")
 	rootCmd.AddCommand(listCmd)
 }

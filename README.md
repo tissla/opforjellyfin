@@ -111,12 +111,13 @@ A terminal that supports unicode-characters is heavily recommended for best expe
    ./opfor setDir "/media/One Piece/One Pace"
    ```
 
-1. Find all available episodes with 'list', or use the -t flag to specify a title, or -r flag to specify a chapter-range.
+1. Find all available episodes with 'list', or use the -t flag to specify a title, -r flag to specify a chapter-range, or -n flag to sort by newest first.
 
    ```bash
    ./opfor list
    ./opfor list -t Wano
    ./opfor list -r 15-20
+   ./opfor list -n
    ```
 
 1. Download a torrent by using the downloadkey, displayed in front of the title. You can download one or multiple at the same time.
