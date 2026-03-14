@@ -134,6 +134,19 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 		logger.Log(false, "Title match found: ChapterKey: %s - EpisodeTitle: %s", ogcr, fileName)
 	}
 
+	// Overlap-based fallback: use FindMatchingEpisodes when exact methods fail
+	if newFileName == "" {
+		matches := shared.FindMatchingEpisodes(ogcr, index)
+		// Pick the first match that belongs to the same season
+		for _, m := range matches {
+			if m.SeasonKey == seasonFolderName && m.EpisodeTitle != "" {
+				logger.Log(false, "findMetaDataMatch: overlap match found: %s -> %s (%d)", ogcr, m.EpisodeTitle, m.MatchType)
+				newFileName = m.EpisodeTitle
+				break
+			}
+		}
+	}
+
 	seasonDir := filepath.Join(baseDir, seasonFolderName)
 
 	if newFileName == "" {
@@ -162,20 +175,29 @@ func findTitleForChapter(chapterKey string, sindex shared.SeasonIndex) string {
 	return ""
 }
 
-// finds the season a ChapterKey belongs to. returns the season name as a string, also returns the whole SeasonIndex struct
+// finds the season a ChapterKey belongs to. returns the season name as a string, also returns the whole SeasonIndex struct.
+// When multiple seasons contain the range (e.g. overlapping recap seasons), picks the narrowest fit.
 func findSeasonForChapter(chapterKey string, index *shared.MetadataIndex) (string, shared.SeasonIndex) {
 	chStart, chEnd := shared.ParseRange(chapterKey)
+
+	bestName := ""
+	bestSeason := shared.SeasonIndex{}
+	bestSize := -1
 
 	for seasonName, season := range index.Seasons {
 		seasonStart, seasonEnd := shared.ParseRange(season.Range)
 
 		if chStart >= seasonStart && chEnd <= seasonEnd {
-			return seasonName, season
+			size := shared.RangeSize(seasonStart, seasonEnd)
+			if bestSize == -1 || size < bestSize {
+				bestName = seasonName
+				bestSeason = season
+				bestSize = size
+			}
 		}
 	}
 
-	return "", shared.SeasonIndex{}
-
+	return bestName, bestSeason
 }
 
 // rough finder

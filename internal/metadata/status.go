@@ -18,37 +18,44 @@ func HaveVideoStatus(chapterRange string) int {
 	cfg := shared.LoadConfig()
 	baseDir := cfg.TargetDir
 
-	for seasonKey, season := range index.Seasons {
-		seasonDir := filepath.Join(baseDir, seasonKey)
+	matches := shared.FindMatchingEpisodes(chapterRange, index)
+	if len(matches) == 0 {
+		return 0
+	}
 
-		if season.Range == chapterRange {
-			v, n := CountVideosAndTotal(seasonDir)
-			logger.Log(false, "HaveVideoStatus: counted %d videos and %d nfos for seasonKey: %s", v, n, seasonKey)
-			if v == 0 {
-				return 0
-			}
-
-			if v < n {
-				return 1
-			}
-
-			return 2
+	// Season-level match (bundle torrent or exact season)
+	if matches[0].EpisodeRange == "" {
+		seasonDir := filepath.Join(baseDir, matches[0].SeasonKey)
+		v, n := CountVideosAndTotal(seasonDir)
+		logger.Log(false, "HaveVideoStatus: counted %d videos and %d nfos for seasonKey: %s", v, n, matches[0].SeasonKey)
+		if v == 0 {
+			return 0
 		}
+		if v < n {
+			return 1
+		}
+		return 2
+	}
 
-		for epRange, epData := range season.EpisodeRange {
-			if epRange == chapterRange {
-				videoPathMP4 := filepath.Join(seasonDir, epData.Title+".mp4")
-				videoPathMKV := filepath.Join(seasonDir, epData.Title+".mkv")
+	// Episode-level matches: check if video files exist for each matched episode
+	haveCount := 0
+	for _, m := range matches {
+		seasonDir := filepath.Join(baseDir, m.SeasonKey)
+		videoPathMP4 := filepath.Join(seasonDir, m.EpisodeTitle+".mp4")
+		videoPathMKV := filepath.Join(seasonDir, m.EpisodeTitle+".mkv")
 
-				if shared.FileExists(videoPathMP4) || shared.FileExists(videoPathMKV) {
-					return 2
-				}
-			}
-
+		if shared.FileExists(videoPathMP4) || shared.FileExists(videoPathMKV) {
+			haveCount++
 		}
 	}
 
-	return 0
+	if haveCount == 0 {
+		return 0
+	}
+	if haveCount < len(matches) {
+		return 1
+	}
+	return 2
 }
 
 // HaveMetadata checks if metadata exists for given chapterRange.
@@ -58,23 +65,8 @@ func HaveMetadata(chapterRange string) bool {
 	}
 
 	LoadMetadataCache()
-	norm := shared.NormalizeDash(chapterRange)
-
-	for _, season := range metadataCache.Seasons {
-		// season range match instantly
-		if shared.NormalizeDash(season.Range) == norm {
-			return true
-		}
-
-		// match individual episodes
-		for epRange := range season.EpisodeRange {
-			if shared.NormalizeDash(epRange) == norm {
-				return true
-			}
-		}
-	}
-
-	return false
+	matches := shared.FindMatchingEpisodes(chapterRange, metadataCache)
+	return len(matches) > 0
 }
 
 // video and .nfo file counter. Returns: number of videos matched with episode .nfo file, number of episode .nfo files

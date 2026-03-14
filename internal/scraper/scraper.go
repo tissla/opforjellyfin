@@ -36,38 +36,54 @@ func FetchTorrents(cfg shared.Config) ([]shared.TorrentEntry, error) {
 	for {
 		searchURL := fmt.Sprintf(baseURL+srcConfig.SearchPathTemplate, srcConfig.SearchQuery, page)
 
-		resp, err := http.Get(searchURL)
+		entries, done, err := fetchPage(searchURL, &srcConfig, baseURL)
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		rawEntries = append(rawEntries, entries...)
+		if done {
+			break
 		}
-
-		doc, err := goquery.NewDocumentFromReader(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		rows := doc.Find(srcConfig.RowSelector)
-		if rows.Length() == 0 {
-			break // finito
-		}
-
-		rows.Each(func(i int, s *goquery.Selection) {
-			entry, ok := parseRow(s, &srcConfig, baseURL)
-			if ok {
-				rawEntries = append(rawEntries, entry)
-			}
-		})
 
 		page++
 	}
 
 	// Sort and assign download keys
 	return processEntries(rawEntries), nil
+}
+
+// fetchPage retrieves and parses a single search results page.
+// Returns the parsed entries, whether there are no more pages, and any error.
+func fetchPage(searchURL string, config *shared.ScraperConfig, baseURL string) ([]shared.TorrentEntry, bool, error) {
+	resp, err := http.Get(searchURL)
+	if err != nil {
+		return nil, false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, false, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		return nil, false, err
+	}
+
+	rows := doc.Find(config.RowSelector)
+	if rows.Length() == 0 {
+		return nil, true, nil
+	}
+
+	var entries []shared.TorrentEntry
+	rows.Each(func(i int, s *goquery.Selection) {
+		entry, ok := parseRow(s, config, baseURL)
+		if ok {
+			entries = append(entries, entry)
+		}
+	})
+
+	return entries, false, nil
 }
 
 // parseRow extracts torrent data from a table row using the scraper config

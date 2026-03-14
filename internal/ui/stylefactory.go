@@ -165,7 +165,7 @@ func AnsiPadRight(text string, width int, taila ...string) string {
 		tail = taila[0]
 	}
 	trunc := ansi.Truncate(text, width, tail)
-	visible := runewidth.StringWidth(trunc)
+	visible := runewidth.StringWidth(ansi.Strip(trunc))
 	if visible < width {
 		trunc += strings.Repeat(" ", width-visible)
 	}
