@@ -148,7 +148,6 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 
 // exact match, returns title from metadataindex using chapterKey.
 // Uses numeric comparison so "023-041" matches "23-41".
-// Falls back to best overlapping range if no exact match is found.
 func findTitleForChapter(chapterKey string, sindex shared.SeasonIndex) string {
 	normKey := shared.NormalizeDash(chapterKey)
 	keyStart, keyEnd := shared.ParseRange(normKey)
@@ -162,29 +161,6 @@ func findTitleForChapter(chapterKey string, sindex shared.SeasonIndex) string {
 			if epStart == keyStart && epEnd == keyEnd {
 				return ep.Title
 			}
-		}
-	}
-
-	// fallback: find best overlapping episode (most overlap relative to both ranges)
-	if keyStart >= 0 && keyEnd >= 0 {
-		bestTitle := ""
-		bestOverlap := 0
-		for epRange, ep := range sindex.EpisodeRange {
-			epStart, epEnd := shared.ParseRange(shared.NormalizeDash(epRange))
-			if epStart < 0 || epEnd < 0 {
-				continue
-			}
-			overlapStart := max(keyStart, epStart)
-			overlapEnd := min(keyEnd, epEnd)
-			overlap := overlapEnd - overlapStart + 1
-			if overlap > 0 && overlap > bestOverlap {
-				bestOverlap = overlap
-				bestTitle = ep.Title
-			}
-		}
-		if bestTitle != "" {
-			logger.Log(false, "findTitleForChapter: overlap match for %s -> %s", chapterKey, bestTitle)
-			return bestTitle
 		}
 	}
 
