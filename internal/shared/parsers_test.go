@@ -9,8 +9,12 @@ func TestExtractChapterRangeFromTitle(t *testing.T) {
 	}{
 		{"[One Pace][8-11] adas", "8-11"},
 		{"[One Pace][42] single1", "42-42"},
-		{"[One Pace][3, 153-156] single2", "3-3"},
-		{"[One Pace][123-124, 520] tail", "123-124"},
+		{"[One Pace][3, 153-156] single2", "3-156"},
+		{"[One Pace][123-124, 520] tail", "123-520"},
+		{"[One Pace][160, 162-164] Arabasta 04", "160-164"},
+		{"[One Pace][159, 161-162] Arabasta 03", "159-162"},
+		{"[One Pace][023-041] Syrup Village", "23-41"},
+		{"[One Pace][001] Romance Dawn", "1-1"},
 		{"nothingatall", ""},
 	}
 

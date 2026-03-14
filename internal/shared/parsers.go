@@ -13,6 +13,7 @@ func IsEpisodeNFO(filename string) bool {
 }
 
 // strict version, used for torrents. Tries to extract Chapter Range from a string [One Pace] [x-y* returns x-y
+// For comma-separated values like [160, 162-164], computes the full min-max range (160-164).
 func ExtractChapterRangeFromTitle(title string) string {
 	re := regexp.MustCompile(`(?i)\[One Pace\]\[([^\]]+)\]`)
 	matches := re.FindStringSubmatch(title)
@@ -22,20 +23,33 @@ func ExtractChapterRangeFromTitle(title string) string {
 	}
 
 	chapterInfo := matches[1]
-
-	parts := strings.Split(chapterInfo, ",")
-	first := strings.TrimSpace(parts[0])
-
-	if matched, _ := regexp.MatchString(`^\d+$`, first); matched {
-		return fmt.Sprintf("%s-%s", first, first)
+	numRe := regexp.MustCompile(`\d+`)
+	allNums := numRe.FindAllString(chapterInfo, -1)
+	if len(allNums) == 0 {
+		logger.Log(false, "could not parse chapter format: %s", chapterInfo)
+		return ""
 	}
 
-	if matched, _ := regexp.MatchString(`^\d+-\d+$`, first); matched {
-		return first
+	min, max := -1, -1
+	for _, s := range allNums {
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			continue
+		}
+		if min == -1 || n < min {
+			min = n
+		}
+		if n > max {
+			max = n
+		}
 	}
 
-	logger.Log(false, "could not parse chapter format: %s", first)
-	return ""
+	if min < 0 {
+		logger.Log(false, "could not parse chapter format: %s", chapterInfo)
+		return ""
+	}
+
+	return fmt.Sprintf("%d-%d", min, max)
 }
 
 // extracts the two ints separated by "-"

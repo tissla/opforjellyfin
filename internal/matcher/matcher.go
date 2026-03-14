@@ -147,25 +147,56 @@ func findMetadataMatch(fileName string, index *shared.MetadataIndex, ogcr string
 }
 
 // exact match, returns title from metadataindex using chapterKey.
+// Uses numeric comparison so "023-041" matches "23-41".
+// Falls back to best overlapping range if no exact match is found.
 func findTitleForChapter(chapterKey string, sindex shared.SeasonIndex) string {
 	normKey := shared.NormalizeDash(chapterKey)
+	keyStart, keyEnd := shared.ParseRange(normKey)
 
 	logger.Log(false, "findEpisodeKeyForChapter: chapterKey: %s - normKey: %s ", chapterKey, normKey)
 
-	for epRange, ep := range sindex.EpisodeRange {
-		if shared.NormalizeDash(epRange) == normKey {
-			return ep.Title
+	// exact numeric match
+	if keyStart >= 0 && keyEnd >= 0 {
+		for epRange, ep := range sindex.EpisodeRange {
+			epStart, epEnd := shared.ParseRange(shared.NormalizeDash(epRange))
+			if epStart == keyStart && epEnd == keyEnd {
+				return ep.Title
+			}
 		}
 	}
 
-	// no title found based on ChapterKey,
+	// fallback: find best overlapping episode (most overlap relative to both ranges)
+	if keyStart >= 0 && keyEnd >= 0 {
+		bestTitle := ""
+		bestOverlap := 0
+		for epRange, ep := range sindex.EpisodeRange {
+			epStart, epEnd := shared.ParseRange(shared.NormalizeDash(epRange))
+			if epStart < 0 || epEnd < 0 {
+				continue
+			}
+			overlapStart := max(keyStart, epStart)
+			overlapEnd := min(keyEnd, epEnd)
+			overlap := overlapEnd - overlapStart + 1
+			if overlap > 0 && overlap > bestOverlap {
+				bestOverlap = overlap
+				bestTitle = ep.Title
+			}
+		}
+		if bestTitle != "" {
+			logger.Log(false, "findTitleForChapter: overlap match for %s -> %s", chapterKey, bestTitle)
+			return bestTitle
+		}
+	}
+
 	return ""
 }
 
-// finds the season a ChapterKey belongs to. returns the season name as a string, also returns the whole SeasonIndex struct
+// finds the season a ChapterKey belongs to. returns the season name as a string, also returns the whole SeasonIndex struct.
+// Prefers exact containment, falls back to best overlapping season for cross-season bundles.
 func findSeasonForChapter(chapterKey string, index *shared.MetadataIndex) (string, shared.SeasonIndex) {
 	chStart, chEnd := shared.ParseRange(chapterKey)
 
+	// exact containment
 	for seasonName, season := range index.Seasons {
 		seasonStart, seasonEnd := shared.ParseRange(season.Range)
 
@@ -174,8 +205,26 @@ func findSeasonForChapter(chapterKey string, index *shared.MetadataIndex) (strin
 		}
 	}
 
-	return "", shared.SeasonIndex{}
+	// fallback: best overlapping season
+	bestName := ""
+	bestSeason := shared.SeasonIndex{}
+	bestOverlap := 0
+	for seasonName, season := range index.Seasons {
+		seasonStart, seasonEnd := shared.ParseRange(season.Range)
+		if seasonStart < 0 || seasonEnd < 0 {
+			continue
+		}
+		overlapStart := max(chStart, seasonStart)
+		overlapEnd := min(chEnd, seasonEnd)
+		overlap := overlapEnd - overlapStart + 1
+		if overlap > bestOverlap {
+			bestOverlap = overlap
+			bestName = seasonName
+			bestSeason = season
+		}
+	}
 
+	return bestName, bestSeason
 }
 
 // rough finder

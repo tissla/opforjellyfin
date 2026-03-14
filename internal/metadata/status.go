@@ -9,6 +9,7 @@ import (
 )
 
 // checks a range in metadata. 0 = does not have, 1 = have some, 2 = have all
+// Uses numeric comparison for range matching.
 func HaveVideoStatus(chapterRange string) int {
 	if chapterRange == "" {
 		return 0
@@ -17,11 +18,13 @@ func HaveVideoStatus(chapterRange string) int {
 	index := LoadMetadataCache()
 	cfg := shared.LoadConfig()
 	baseDir := cfg.TargetDir
+	crStart, crEnd := shared.ParseRange(shared.NormalizeDash(chapterRange))
 
 	for seasonKey, season := range index.Seasons {
 		seasonDir := filepath.Join(baseDir, seasonKey)
 
-		if season.Range == chapterRange {
+		sStart, sEnd := shared.ParseRange(shared.NormalizeDash(season.Range))
+		if sStart >= 0 && sStart == crStart && sEnd == crEnd {
 			v, n := CountVideosAndTotal(seasonDir)
 			logger.Log(false, "HaveVideoStatus: counted %d videos and %d nfos for seasonKey: %s", v, n, seasonKey)
 			if v == 0 {
@@ -36,7 +39,8 @@ func HaveVideoStatus(chapterRange string) int {
 		}
 
 		for epRange, epData := range season.EpisodeRange {
-			if epRange == chapterRange {
+			epStart, epEnd := shared.ParseRange(shared.NormalizeDash(epRange))
+			if epStart >= 0 && epStart == crStart && epEnd == crEnd {
 				videoPathMP4 := filepath.Join(seasonDir, epData.Title+".mp4")
 				videoPathMKV := filepath.Join(seasonDir, epData.Title+".mkv")
 
@@ -44,7 +48,6 @@ func HaveVideoStatus(chapterRange string) int {
 					return 2
 				}
 			}
-
 		}
 	}
 
@@ -52,24 +55,43 @@ func HaveVideoStatus(chapterRange string) int {
 }
 
 // HaveMetadata checks if metadata exists for given chapterRange.
+// Uses numeric comparison so "023-041" matches "23-41", and overlap matching
+// so "85-88" matches metadata keyed as "85-87".
 func HaveMetadata(chapterRange string) bool {
 	if chapterRange == "" {
 		return false
 	}
 
 	LoadMetadataCache()
-	norm := shared.NormalizeDash(chapterRange)
+	crStart, crEnd := shared.ParseRange(shared.NormalizeDash(chapterRange))
 
 	for _, season := range metadataCache.Seasons {
-		// season range match instantly
-		if shared.NormalizeDash(season.Range) == norm {
+		// season range match
+		sStart, sEnd := shared.ParseRange(shared.NormalizeDash(season.Range))
+		if sStart >= 0 && sStart == crStart && sEnd == crEnd {
 			return true
 		}
 
-		// match individual episodes
+		// match individual episodes (exact numeric, then overlap)
 		for epRange := range season.EpisodeRange {
-			if shared.NormalizeDash(epRange) == norm {
+			epStart, epEnd := shared.ParseRange(shared.NormalizeDash(epRange))
+			if epStart >= 0 && epStart == crStart && epEnd == crEnd {
 				return true
+			}
+		}
+
+		// overlap fallback
+		if crStart >= 0 && crEnd >= 0 {
+			for epRange := range season.EpisodeRange {
+				epStart, epEnd := shared.ParseRange(shared.NormalizeDash(epRange))
+				if epStart < 0 || epEnd < 0 {
+					continue
+				}
+				overlapStart := max(crStart, epStart)
+				overlapEnd := min(crEnd, epEnd)
+				if overlapEnd-overlapStart+1 > 0 {
+					return true
+				}
 			}
 		}
 	}
