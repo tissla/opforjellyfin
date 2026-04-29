@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/scraper"
@@ -31,6 +32,12 @@ var downloadCmd = &cobra.Command{
 			return
 		}
 
+		expandedArgs, err := expandEpisodeArgs(args)
+		if err != nil {
+			logger.Log(true, "❌ %v", err)
+			return
+		}
+
 		cfg := shared.LoadConfig()
 		if cfg.TargetDir == "" {
 			logger.Log(true, "⚠️ No target directory set. Use 'setDir <path>' first.")
@@ -50,7 +57,7 @@ var downloadCmd = &cobra.Command{
 		// stop spinner
 		spinner.Stop()
 		var matches []shared.TorrentEntry
-		for _, arg := range args {
+		for _, arg := range expandedArgs {
 			num, err := strconv.Atoi(arg)
 			if err != nil {
 				logger.Log(true, "❌ Invalid syntax: %s", arg)
@@ -76,7 +83,7 @@ var downloadCmd = &cobra.Command{
 
 			// maybe rewrite this part
 			if forceKey != "" {
-				if len(args) > 1 {
+				if len(expandedArgs) > 1 {
 					logger.Log(true, "❌ --forcekey may only be used with a single DownloadKey")
 				}
 				match.ChapterRange = forceKey
@@ -105,4 +112,40 @@ func init() {
 	downloadCmd.Flags().StringVar(&forceKey, "forcekey", "", "Override chapter range (only for single downloadKey)")
 
 	rootCmd.AddCommand(downloadCmd)
+}
+
+// expandEpisodeArgs takes raw CLI arguments and expands range formats (like "15-17").
+func expandEpisodeArgs(args []string) ([]string, error) {
+	var expanded []string
+
+	for _, arg := range args {
+		// If the argument contains a hyphen, treat it as a range
+		if strings.Contains(arg, "-") {
+			parts := strings.Split(arg, "-")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid range format: %s", arg)
+			}
+			
+			// Parse the start and end of the range
+			start, err1 := strconv.Atoi(parts[0])
+			end, err2 := strconv.Atoi(parts[1])
+			
+			if err1 != nil || err2 != nil {
+				return nil, fmt.Errorf("range must contain valid numbers: %s", arg)
+			}
+			if start > end {
+				return nil, fmt.Errorf("range start cannot be greater than range end: %s", arg)
+			}
+			
+			// Expand the range and append each episode to our result list
+			for i := start; i <= end; i++ {
+				expanded = append(expanded, strconv.Itoa(i))
+			}
+		} else {
+			// If it's a normal single number, just append it
+			expanded = append(expanded, arg)
+		}
+	}
+
+	return expanded, nil
 }
