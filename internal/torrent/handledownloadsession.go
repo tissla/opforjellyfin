@@ -43,11 +43,14 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 		title := ui.StyleFactory(entry.TorrentName, ui.Style.LBlue)
 
 		td := &shared.TorrentDownload{
-			Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
+			FilePlacement: shared.FilePlacement{
+				Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
+				FullTitle:    entry.Title,
+				ChapterRange: entry.ChapterRange,
+			},
+			Entry: 				entry,
 			TorrentID:    entry.TorrentID,
-			FullTitle:    entry.Title,
 			Started:      time.Now(),
-			ChapterRange: entry.ChapterRange,
 		}
 
 		shared.SaveTorrentDownload(td)

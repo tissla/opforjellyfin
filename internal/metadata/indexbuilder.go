@@ -46,13 +46,19 @@ func buildIndexFromDir(baseDir string) (*shared.MetadataIndex, error) {
 		// check if SeasonIndex is there
 		if _, exists := index.Seasons[seasonKey]; !exists {
 			index.Seasons[seasonKey] = shared.SeasonIndex{
-				EpisodeRange: make(map[string]shared.EpisodeData),
+				EpisodeRange: make(map[string][]shared.EpisodeData),
 			}
 		}
-		// just store title, use baseDir+seasonKey+epTitle+mp4/mkv for storing
-		index.Seasons[seasonKey].EpisodeRange[normalized] = shared.EpisodeData{
-			Title: epTitle,
+
+		if _, exists := index.Seasons[seasonKey].EpisodeRange[normalized]; !exists {
+			index.Seasons[seasonKey].EpisodeRange[normalized] = []shared.EpisodeData{}
 		}
+
+		// just store title, use baseDir+seasonKey+epTitle+mp4/mkv for storing
+		index.Seasons[seasonKey].EpisodeRange[normalized] = append(index.Seasons[seasonKey].EpisodeRange[normalized], 
+			shared.EpisodeData{
+				Title: epTitle,
+		})
 
 		return nil
 	})

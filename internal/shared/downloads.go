@@ -69,8 +69,18 @@ func CleanupTempDirs() error {
 }
 
 // helper
-func (td *TorrentDownload) MarkPlaced(msg string) {
-	td.PlacementProgress = msg
-	td.Placed = true
-	SaveTorrentDownload(td)
+func (fp *FilePlacement) MarkPlaced(msg string) {
+	fp.PlacementProgress = msg
+	fp.Placed = true
+	var intf interface{} = *fp
+	switch v := intf.(type) {
+	case TorrentDownload:
+		SaveTorrentDownload(&v)
+	}
 }
+
+//func (td *TorrentDownload) MarkPlaced(msg string) {
+//	td.PlacementProgress = msg
+//	td.Placed = true
+//	SaveTorrentDownload(td)
+//}
