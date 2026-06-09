@@ -28,6 +28,7 @@ type ScraperFields struct {
 	TorrentLink string `json:"torrent_link"`
 	TorrentID   string `json:"torrent_id"`
 	UploadDate  string `json:"upload_date"`
+	FileSize 		string `json:"file_size"`
 }
 
 type ValidationConfig struct {
@@ -39,11 +40,23 @@ type MetadataIndex struct {
 	Seasons map[string]SeasonIndex `json:"seasons"`
 }
 
+type SortedMetadataIndex struct {
+	Seasons []SeasonEntry `json:"seasons"`
+}
+
+// used for sorting MetadataIndex.Seasons
+// Title is equivalent to the key in the map
+// SeasonIndex is the associated value
+type SeasonEntry struct {
+	Title       string      `json:"title"`
+	SeasonIndex SeasonIndex `json:"index"`
+}
+
 // seasons maps episodes
 type SeasonIndex struct {
 	Range        string                 `json:"range"`
 	Name         string                 `json:"name"`
-	EpisodeRange map[string]EpisodeData `json:"episodes"`
+	EpisodeRange map[string][]EpisodeData `json:"episodes"`
 }
 
 // episodes maps titles and have
@@ -51,19 +64,24 @@ type EpisodeData struct {
 	Title string `json:"title"`
 }
 
+type FilePlacement struct {
+	Title             string   // title for display
+	FullTitle         string   // full file title
+	ChapterRange      string   // Main
+	PlacementFull     []string // used to display placed messages after all placements are done
+	PlacementProgress string   // used for placement messages after once placement is started
+	Placed            bool     // set to true when files are placed
+}
+
 // download struct
 type TorrentDownload struct {
-	Title             string    // title for display
-	FullTitle         string    // full torrent title
-	TorrentID         int       // torrentID for tempdir
-	ChapterRange      string    // Main
-	Started           time.Time // time torrent started (unused?)
-	Progress          int64     // used by ui progressbar
-	TotalSize         int64     // used by ui progress bar
-	PlacementFull     []string  // used to display placed messages after all placements are done
-	PlacementProgress string    //used for placement messages after download is done
-	Done              bool      // set to true when torrent is downloaded
-	Placed            bool      // set to true when files are placed, before clearing active downloads
+	FilePlacement
+	Entry 		TorrentEntry  // fields from TorrentEntry for easy access during placement
+	TorrentID int       		// torrentID for tempdir
+	Started   time.Time 		// time torrent started (unused?)
+	Progress  int64     		// used by ui progressbar
+	TotalSize int64     		// used by ui progress bar
+	Done      bool      		// set to true when torrent is downloaded
 }
 
 // entry for dl
@@ -80,6 +98,7 @@ type TorrentEntry struct {
 	MetaDataAvail bool   // metadata matching chapter range exists
 	IsSpecial     bool   // is a special (no chapter range)
 	HaveIt        int    // video with same chapter range exists
-	Date          string //
+	Date          time.Time // the upload date of the torrent, used for sorting and display
+	FileSize			string // file size as displayed on the torrent site
 	IsExtended    bool   // extended version
 }

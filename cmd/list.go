@@ -24,6 +24,7 @@ var (
 
 	onlySpecials bool
 	verboseList  bool
+	sortNewest	 bool
 
 	alternate bool
 )
@@ -57,13 +58,23 @@ var listCmd = &cobra.Command{
 			}
 		}
 
-		// Sort by DownloadKey, then seeders descending
-		sort.SliceStable(filtered, func(i, j int) bool {
-			if filtered[i].DownloadKey == filtered[j].DownloadKey {
-				return filtered[i].Seeders > filtered[j].Seeders
-			}
-			return filtered[i].DownloadKey < filtered[j].DownloadKey
-		})
+		if sortNewest {
+			// Sort by date descending, then seeders descending
+			sort.SliceStable(filtered, func(i, j int) bool {
+				if filtered[i].Date.Equal(filtered[j].Date) {
+					return filtered[i].Seeders > filtered[j].Seeders
+				}
+				return filtered[i].Date.After(filtered[j].Date)
+			})
+		} else {
+			// Sort by DownloadKey, then seeders descending
+			sort.SliceStable(filtered, func(i, j int) bool {
+				if filtered[i].DownloadKey == filtered[j].DownloadKey {
+					return filtered[i].Seeders > filtered[j].Seeders
+				}
+				return filtered[i].DownloadKey < filtered[j].DownloadKey
+			})
+		}
 
 		spinner.Stop()
 
@@ -138,8 +149,15 @@ func renderRow(t shared.TorrentEntry) {
 	// styling and render
 	truncatedTitle := ui.AnsiPadRight(t.TorrentName, 30)
 
+	var dateFmt string
+	if t.Date.IsZero() {
+		dateFmt = "N/A"
+	} else {
+		dateFmt = t.Date.Format("2006-01-02 15:04:05")
+	}
+
 	row := ui.RenderRow(
-		"%s - %s: %s Have? %s | Meta: %s | %-9s | %s | %s seeders | %s",
+		"%s - %s: %s Have? %s | Meta: %s | %-9s | %s | %s seeders | %s | %s",
 		alternate,
 		ui.StyleFactory("DKEY", ui.Style.LBlue),
 		ui.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), ui.Style.Pink),
@@ -149,7 +167,8 @@ func renderRow(t shared.TorrentEntry) {
 		t.ChapterRange,
 		ui.AnsiPadLeft(ui.StyleByRange(t.Quality, 400, 1000), 5),
 		ui.AnsiPadLeft(ui.StyleByRange(t.Seeders, 0, 10), 3),
-		t.Date,
+		t.FileSize,
+		dateFmt,
 	)
 
 	// set flag
@@ -173,8 +192,15 @@ func renderVerboseRow(t shared.TorrentEntry) {
 
 	fullTitle := ui.AnsiPadRight(t.Title, 60)
 
+	var dateFmt string
+	if t.Date.IsZero() {
+		dateFmt = "N/A"
+	} else {
+		dateFmt = t.Date.Format("2006-01-02 15:04:05")
+	}
+
 	row := ui.RenderRow(
-		"%s - %s: %s H:%s M:%s | %s seeders | %s",
+		"%s - %s: %s H:%s M:%s | %s seeders | %s | %s",
 		alternate,
 		ui.StyleFactory("DKEY", ui.Style.LBlue),
 		ui.StyleFactory(fmt.Sprintf("%4d", t.DownloadKey), ui.Style.Pink),
@@ -182,7 +208,8 @@ func renderVerboseRow(t shared.TorrentEntry) {
 		haveMark,
 		metaMark,
 		ui.AnsiPadLeft(ui.StyleByRange(t.Seeders, 0, 10), 3),
-		t.Date,
+		t.FileSize,
+		dateFmt,
 	)
 
 	alternate = !alternate
@@ -198,5 +225,6 @@ func init() {
 
 	listCmd.Flags().BoolVarP(&onlySpecials, "specials", "s", false, "Show only specials")
 	listCmd.Flags().BoolVarP(&verboseList, "verbose", "v", false, "Show full titles")
+	listCmd.Flags().BoolVarP(&sortNewest, "newest", "n", false, "Sort by newest upload date")
 	rootCmd.AddCommand(listCmd)
 }

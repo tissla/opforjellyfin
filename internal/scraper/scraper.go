@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -36,32 +37,14 @@ func FetchTorrents(cfg shared.Config) ([]shared.TorrentEntry, error) {
 	for {
 		searchURL := fmt.Sprintf(baseURL+srcConfig.SearchPathTemplate, srcConfig.SearchQuery, page)
 
-		resp, err := http.Get(searchURL)
+		entries, done, err := fetchPage(searchURL, &srcConfig, baseURL)
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		rawEntries = append(rawEntries, entries...)
+		if done {
+			break
 		}
-
-		doc, err := goquery.NewDocumentFromReader(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		rows := doc.Find(srcConfig.RowSelector)
-		if rows.Length() == 0 {
-			break // finito
-		}
-
-		rows.Each(func(i int, s *goquery.Selection) {
-			entry, ok := parseRow(s, &srcConfig, baseURL)
-			if ok {
-				rawEntries = append(rawEntries, entry)
-			}
-		})
 
 		page++
 	}
@@ -70,13 +53,61 @@ func FetchTorrents(cfg shared.Config) ([]shared.TorrentEntry, error) {
 	return processEntries(rawEntries), nil
 }
 
+// fetchPage retrieves and parses a single search results page.
+// Returns the parsed entries, whether there are no more pages, and any error.
+func fetchPage(searchURL string, config *shared.ScraperConfig, baseURL string) ([]shared.TorrentEntry, bool, error) {
+	resp, err := http.Get(searchURL)
+	if err != nil {
+		return nil, false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, false, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		return nil, false, err
+	}
+
+	rows := doc.Find(config.RowSelector)
+	if rows.Length() == 0 {
+		return nil, true, nil
+	}
+
+	var entries []shared.TorrentEntry
+	rows.Each(func(i int, s *goquery.Selection) {
+		entry, ok := parseRow(s, config, baseURL)
+		if ok {
+			entries = append(entries, entry)
+		}
+	})
+
+	return entries, false, nil
+}
+
 // parseRow extracts torrent data from a table row using the scraper config
 func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string) (shared.TorrentEntry, bool) {
 	// Extract fields using configured selectors
 	title := s.Find(config.Fields.Title).Text()
 	seedersStr := s.Find(config.Fields.Seeders).Text()
 	torrentLink, _ := s.Find(config.Fields.TorrentLink).Attr("href")
-	date := s.Find(config.Fields.UploadDate).Text()
+	dateNode := s.Find(config.Fields.UploadDate)
+	fileSizeStr := s.Find(config.Fields.FileSize).Text()
+	dateStr, attrExists := dateNode.Attr("data-timestamp")
+	var date time.Time
+	var err error
+	if attrExists {
+		dateTimestamp, _ := strconv.Atoi(dateStr)
+		date = time.Unix(int64(dateTimestamp), 0)
+	} else {
+		dateStr = dateNode.Text()
+		date, err = time.Parse("2006-01-02 15:04", dateStr)
+		if err != nil {
+			date = time.Time{} // zero value if parsing fails
+		}
+	}
 
 	// Validate based on config
 	if config.Validation.RequiredInTitle != "" {
@@ -130,6 +161,7 @@ func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string
 		MetaDataAvail: metaDataAvail,
 		HaveIt:        videoStatus,
 		Date:          date,
+		FileSize:			 fileSizeStr,
 		IsExtended:    isExtended,
 	}, true
 }

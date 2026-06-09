@@ -9,17 +9,16 @@ import (
 	"strings"
 )
 
-// walks through downloaded files and tries to place them in correct dir
-func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, index *shared.MetadataIndex) {
+func ProcessVideoFiles(srcDir, outDir string, td *shared.TorrentDownload, index *shared.MetadataIndex) {
 	filesChecked := 0
 	filesPlaced := 0
 	var lastError error
 
 	// collect all paths
-	td.PlacementProgress = fmt.Sprintf("🔧 Finding files to place %s", tmpDir)
+	td.PlacementProgress = fmt.Sprintf("🔧 Finding files to place %s", srcDir)
 
 	var vidPaths []string
-	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			logger.Log(true, "Failed walking file: %v", err)
 			return nil
@@ -58,7 +57,7 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 		td.PlacementProgress = fmt.Sprintf("🔧 Placing ➝ %d/%d - %s", (filesPlaced + 1), len(vidPaths), readablePath)
 
 		// match and place
-		msg, err := MatchAndPlaceVideo(path, outDir, index, td.ChapterRange)
+		msg, err := MatchAndPlaceVideo(path, outDir, index, td)
 		if err != nil {
 			logger.Log(true, "Error placing file: %v", err)
 			lastError = err
@@ -67,6 +66,11 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 			//save msg for final summary
 			td.PlacementFull = append(td.PlacementFull, msg)
 			shared.SaveTorrentDownload(td)
+			// var intf interface{} = *td
+			// switch v := intf.(type) {
+			// case shared.TorrentDownload:
+			// 	shared.SaveTorrentDownload(&v)
+			// }
 		}
 	}
 
@@ -90,4 +94,9 @@ func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, inde
 
 	td.MarkPlaced(placedMsg)
 	logger.Log(false, "File placement done: %d checked, %d placed", filesChecked, filesPlaced)
+}
+
+// walks through downloaded files and tries to place them in correct dir
+func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, index *shared.MetadataIndex) {
+	ProcessVideoFiles(tmpDir, outDir, td, index)
 }
