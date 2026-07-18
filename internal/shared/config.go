@@ -76,14 +76,20 @@ func EnsureConfigExists() string {
 
 // returns the config filepath from the OS's default config directory
 func getConfigPath() string {
+	return filepath.Join(ConfigDir(), "config.json")
+}
+
+// ConfigDir returns the app's config directory (creating it if needed), so other
+// packages can place their own per-user files (e.g. the search cache) next to
+// config.json instead of relying on the process's working directory.
+func ConfigDir() string {
 	dirname, err := os.UserConfigDir()
 	if err != nil {
 		log.Fatalf("could not determine config directory: %v", err)
 	}
 	path := filepath.Join(dirname, "opforjellyfin")
-	err = os.MkdirAll(path, 0755)
-	if err != nil {
+	if err := os.MkdirAll(path, 0755); err != nil {
 		log.Fatalf("could not create config dir: %v", err)
 	}
-	return filepath.Join(path, "config.json")
+	return path
 }
