@@ -29,8 +29,15 @@ func SetDir(dir string, force bool) {
 		log.Fatalf("❌ Invalid directory: %v", err)
 	}
 
-	cfg, _ := shared.LoadConfig()
-	shared.SaveConfig(*cfg)
+	cfg, err := shared.LoadConfig()
+	if err != nil {
+		log.Fatalf("❌ Could not load config: %v", err)
+	}
+
+	cfg.TargetDir = abs
+	if err := shared.SaveConfig(*cfg); err != nil {
+		log.Fatalf("❌ Could not save config: %v", err)
+	}
 
 	fmt.Println("✅ Default target directory set to:", abs)
 
