@@ -172,7 +172,22 @@ func SyncDir(src, dst string) error {
 // also holds user-downloaded video files that this must never touch.
 func warnStaleMetadataFiles(src, dst string) {
 	err := filepath.Walk(dst, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(strings.ToLower(info.Name()), ".nfo") {
+		if err != nil {
+			return nil
+		}
+
+		if info.IsDir() {
+			// .opfor-tmp (the in-progress clone, including src itself) lives
+			// inside dst - walking into it would compare every freshly
+			// cloned NFO against itself under a doubly-nested path and
+			// falsely report all of them as stale. Skip dotdirs entirely.
+			if strings.HasPrefix(info.Name(), ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if !strings.HasSuffix(strings.ToLower(info.Name()), ".nfo") {
 			return nil
 		}
 
