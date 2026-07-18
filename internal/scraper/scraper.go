@@ -2,6 +2,7 @@
 package scraper
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"opforjellyfin/internal/logger"
@@ -11,11 +12,16 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
 // TODO: sort file, add more structs, add scrape-map
+
+// requestTimeout bounds each per-page search request, so a slow or hanging
+// tracker doesn't stall FetchTorrents' unbounded pagination loop forever.
+const requestTimeout = 15 * time.Second
 
 // gets the torrents using current config, throws error if no valid config found
 func FetchTorrents(cfg *shared.Config) ([]shared.TorrentEntry, error) {
@@ -37,17 +43,7 @@ func FetchTorrents(cfg *shared.Config) ([]shared.TorrentEntry, error) {
 	for {
 		searchURL := fmt.Sprintf(baseURL+srcConfig.SearchPathTemplate, srcConfig.SearchQuery, page)
 
-		resp, err := http.Get(searchURL)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-		}
-
-		doc, err := goquery.NewDocumentFromReader(resp.Body)
+		doc, err := fetchDoc(searchURL)
 		if err != nil {
 			return nil, err
 		}
@@ -69,6 +65,32 @@ func FetchTorrents(cfg *shared.Config) ([]shared.TorrentEntry, error) {
 
 	// Sort and assign download keys
 	return processEntries(rawEntries), nil
+}
+
+// fetchDoc fetches a single search-results page with a bounded timeout and
+// parses it into a goquery document. The response body is closed before
+// returning rather than deferred up to the caller's loop, so it doesn't stay
+// open across every remaining page of pagination.
+func fetchDoc(url string) (*goquery.Document, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return goquery.NewDocumentFromReader(resp.Body)
 }
 
 // parseRow extracts torrent data from a table row using the scraper config
