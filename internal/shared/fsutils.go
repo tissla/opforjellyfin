@@ -7,6 +7,7 @@ import (
 	"opforjellyfin/internal/logger"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -157,7 +158,39 @@ func SyncDir(src, dst string) error {
 	dirMutex.Lock()
 	defer dirMutex.Unlock()
 
-	return walkAndCopyInternal(src, dst, true)
+	if err := walkAndCopyInternal(src, dst, true); err != nil {
+		return err
+	}
+
+	warnStaleMetadataFiles(src, dst)
+	return nil
+}
+
+// warnStaleMetadataFiles reports .nfo files present locally under dst that no
+// longer exist in the upstream src tree (e.g. the metadata repo renamed or
+// removed an episode). It only reports - it never deletes anything, since dst
+// also holds user-downloaded video files that this must never touch.
+func warnStaleMetadataFiles(src, dst string) {
+	err := filepath.Walk(dst, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(strings.ToLower(info.Name()), ".nfo") {
+			return nil
+		}
+
+		relPath, relErr := filepath.Rel(dst, path)
+		if relErr != nil {
+			return nil
+		}
+
+		if !FileExists(filepath.Join(src, relPath)) {
+			logger.Log(true, "⚠️  %s no longer exists in the metadata repo (kept locally - review manually)", relPath)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Log(false, "warnStaleMetadataFiles: walk failed: %v", err)
+	}
 }
 
 // walkAndCopyInternal is the internal non-locked version
