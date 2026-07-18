@@ -30,6 +30,26 @@ func LoadMetadataCache() *shared.MetadataIndex {
 	return metadataCache
 }
 
+// loadIndexIntoCache reads an existing metadata-index.json (e.g. one shipped
+// pre-built by the metadata repo, copied in as-is) and puts it straight into
+// the in-memory cache, without re-deriving it from the .nfo files on disk.
+func loadIndexIntoCache(baseDir string) error {
+	path := filepath.Join(baseDir, "metadata-index.json")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("could not read metadata index: %w", err)
+	}
+
+	var index shared.MetadataIndex
+	if err := json.Unmarshal(data, &index); err != nil {
+		return fmt.Errorf("could not parse metadata index: %w", err)
+	}
+
+	metadataCache = &index
+	return nil
+}
+
 // saves file and creates cache
 func saveMetadataIndex(index *shared.MetadataIndex, baseDir string) error {
 	path := filepath.Join(baseDir, "metadata-index.json")

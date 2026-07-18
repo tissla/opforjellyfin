@@ -70,7 +70,17 @@ func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 		return err
 	}
 
-	if err := BuildMetadataIndex(baseDir); err != nil {
+	// If the metadata repo ships its own pre-built metadata-index.json inside
+	// "One Pace", CopyDir/SyncDir already copied it into baseDir above - use it
+	// directly instead of re-deriving it from every .nfo file via regex on this
+	// machine. Falls back to building it locally for repos that don't ship one.
+	if shared.FileExists(filepath.Join(srcDir, "metadata-index.json")) {
+		logger.Log(false, "metadata: using prebuilt metadata-index.json shipped by the repo")
+		if err := loadIndexIntoCache(baseDir); err != nil {
+			spinner.Stop()
+			return err
+		}
+	} else if err := BuildMetadataIndex(baseDir); err != nil {
 		spinner.Stop()
 		return err
 	}
