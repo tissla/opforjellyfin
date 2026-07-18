@@ -3,6 +3,7 @@ package metadata
 import (
 	"encoding/json"
 	"fmt"
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"os"
 	"path/filepath"
@@ -18,13 +19,29 @@ var (
 // returns a reference to the index-variable
 func LoadMetadataCache() *shared.MetadataIndex {
 	metadataCacheOnce.Do(func() {
-		cfg, _ := shared.LoadConfig()
-		data, err := os.ReadFile(filepath.Join(cfg.TargetDir, "metadata-index.json"))
+		cfg, err := shared.LoadConfig()
 		if err != nil {
+			logger.Log(false, "metadata: could not load config: %v", err)
 			metadataCache = &shared.MetadataIndex{}
 			return
 		}
-		json.Unmarshal(data, &metadataCache)
+
+		path := filepath.Join(cfg.TargetDir, "metadata-index.json")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			// Not existing yet is the expected state before the first setDir/sync -
+			// anything else (permissions, etc.) is worth a log entry.
+			if !os.IsNotExist(err) {
+				logger.Log(false, "metadata: could not read %s: %v", path, err)
+			}
+			metadataCache = &shared.MetadataIndex{}
+			return
+		}
+
+		if err := json.Unmarshal(data, &metadataCache); err != nil {
+			logger.Log(false, "metadata: could not parse %s: %v", path, err)
+			metadataCache = &shared.MetadataIndex{}
+		}
 	})
 
 	return metadataCache
