@@ -36,9 +36,17 @@ func GetActiveDownloads() []*TorrentDownload {
 		list = append(list, td)
 	}
 
-	//make sure they come in the right order
+	// Sort by ChapterRange, then by TorrentID as a deterministic tiebreak.
+	// Map iteration order is randomized on every call, so without a full
+	// tiebreak, entries tied on ChapterRange (e.g. two specials, both with
+	// an empty ChapterRange) would swap places between ticks - this is
+	// redrawn from scratch every 300ms by ui.FollowProgress, so any
+	// nondeterminism here shows up as rows visibly jumping around.
 	sort.SliceStable(list, func(i, j int) bool {
-		return list[i].ChapterRange < list[j].ChapterRange
+		if list[i].ChapterRange != list[j].ChapterRange {
+			return list[i].ChapterRange < list[j].ChapterRange
+		}
+		return list[i].TorrentID < list[j].TorrentID
 	})
 
 	return list
