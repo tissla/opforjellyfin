@@ -16,6 +16,7 @@ import (
 
 var (
 	forceKey string
+	seed     bool
 )
 
 var downloadCmd = &cobra.Command{
@@ -95,14 +96,19 @@ var downloadCmd = &cobra.Command{
 			os.Exit(0)
 		}
 
+		if seed && len(matches) > torrent.MaxConcurrent {
+			logger.Log(true, "⚠️  --seed with more than %d keys: only the first %d will start at all this run - a seeding worker never frees up to pick up the rest until you stop with Ctrl+C.", torrent.MaxConcurrent, torrent.MaxConcurrent)
+		}
+
 		// outsourced to monitoring function
-		torrent.HandleDownloadSession(matches, cfg.TargetDir)
+		torrent.HandleDownloadSession(matches, cfg.TargetDir, seed)
 
 	},
 }
 
 func init() {
 	downloadCmd.Flags().StringVar(&forceKey, "forcekey", "", "Override chapter range (only for single downloadKey)")
+	downloadCmd.Flags().BoolVar(&seed, "seed", false, "Keep seeding downloaded torrents until you stop the program (Ctrl+C)")
 
 	rootCmd.AddCommand(downloadCmd)
 }

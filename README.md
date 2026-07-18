@@ -26,9 +26,7 @@ This is fixed for next release.
 
 1. 'sort' command - To target a directory containing files, and renaming/sorting them into your metadata directory.
 
-2. Cache for downloadKeys. This will prevent mismatches between 'list' and 'download'.
-
-3. Seeder-mode.
+Done: caching for downloadKeys (prevents mismatches between 'list' and 'download'), and seeder-mode (`./opfor download <key> --seed` keeps seeding until you stop the program with Ctrl+C).
 
 ## 📸 Examples
 
