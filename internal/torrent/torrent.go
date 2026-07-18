@@ -22,13 +22,13 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 	srcBaseURL := config.Source.BaseURL
 	// get torrent meta-info
 	torrentURL := fmt.Sprintf("%s/download/%d.torrent", srcBaseURL, td.TorrentID)
-	logger.Log(false, "Fetching torrent: %s, ID: %s", torrentURL, td)
+	logger.Log(false, "Fetching torrent: %s, ID: %s", torrentURL, td.Title)
 
 	// get metadata
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, torrentURL, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		logger.Log(false, "HTTP request for metadata failed %s", td)
+		logger.Log(false, "HTTP request for metadata failed %s", td.Title)
 		return err
 	}
 	defer resp.Body.Close()
@@ -67,7 +67,7 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 	select {
 	case <-t.GotInfo():
 		td.TotalSize = t.Length()
-		logger.Log(false, "Torrent metadata loaded: %s", td)
+		logger.Log(false, "Torrent metadata loaded: %s", td.Title)
 	case <-time.After(20 * time.Second):
 		return fmt.Errorf("timeout waiting for torrent metadata")
 	case <-ctx.Done():
@@ -100,7 +100,7 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload) error {
 	td.Done = true
 	td.PlacementProgress = "⏳ Waiting to place.."
 	shared.SaveTorrentDownload(td)
-	logger.Log(false, "Download complete: %s", td)
+	logger.Log(false, "Download complete: %s", td.Title)
 
 	return nil
 }

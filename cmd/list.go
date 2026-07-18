@@ -67,7 +67,7 @@ var listCmd = &cobra.Command{
 
 		spinner.Stop()
 
-		fmt.Println("📚 Filtered Download List:\n")
+		fmt.Println("📚 Filtered Download List:")
 		for _, t := range filtered {
 			if verboseList {
 				renderVerboseRow(t)
