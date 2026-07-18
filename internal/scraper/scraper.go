@@ -116,8 +116,6 @@ func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string
 
 	videoStatus := metadata.HaveVideoStatus(chapterRange)
 
-	isExtended := isExtended(title)
-
 	return shared.TorrentEntry{
 		Title:         title,
 		Quality:       quality,
@@ -131,7 +129,6 @@ func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string
 		MetaDataAvail: metaDataAvail,
 		HaveIt:        videoStatus,
 		Date:          date,
-		IsExtended:    isExtended,
 	}, true
 }
 
@@ -174,12 +171,6 @@ func processEntries(rawEntries []shared.TorrentEntry) []shared.TorrentEntry {
 		logger.Log(false, "Failed to cache")
 	}
 	return filtered
-}
-
-func isExtended(title string) bool {
-	title = strings.ToLower(title)
-
-	return strings.Contains(title, "extended")
 }
 
 // parseQuality returns video quality based on title string

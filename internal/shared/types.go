@@ -1,7 +1,5 @@
 package shared
 
-import "time"
-
 // TODO: cleanup unused properties
 
 // config file
@@ -53,17 +51,16 @@ type EpisodeData struct {
 
 // download struct
 type TorrentDownload struct {
-	Title             string    // title for display
-	FullTitle         string    // full torrent title
-	TorrentID         int       // torrentID for tempdir
-	ChapterRange      string    // Main
-	Started           time.Time // time torrent started (unused?)
-	Progress          int64     // used by ui progressbar
-	TotalSize         int64     // used by ui progress bar
-	PlacementFull     []string  // used to display placed messages after all placements are done
-	PlacementProgress string    //used for placement messages after download is done
-	Done              bool      // set to true when torrent is downloaded
-	Placed            bool      // set to true when files are placed, before clearing active downloads
+	Title             string   // title for display
+	FullTitle         string   // full torrent title
+	TorrentID         int      // torrentID for tempdir
+	ChapterRange      string   // Main
+	Progress          int64    // used by ui progressbar
+	TotalSize         int64    // used by ui progress bar
+	PlacementFull     []string // used to display placed messages after all placements are done
+	PlacementProgress string   //used for placement messages after download is done
+	Done              bool     // set to true when torrent is downloaded
+	Placed            bool     // set to true when files are placed, before clearing active downloads
 }
 
 // entry for dl
@@ -81,5 +78,4 @@ type TorrentEntry struct {
 	IsSpecial     bool   // is a special (no chapter range)
 	HaveIt        int    // video with same chapter range exists
 	Date          string //
-	IsExtended    bool   // extended version
 }

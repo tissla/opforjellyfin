@@ -46,7 +46,6 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string) {
 			Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
 			TorrentID:    entry.TorrentID,
 			FullTitle:    entry.Title,
-			Started:      time.Now(),
 			ChapterRange: entry.ChapterRange,
 		}
 
