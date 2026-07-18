@@ -2,11 +2,13 @@
 package metadata
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 )
@@ -73,7 +75,14 @@ func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 		return err
 	}
 
-	shared.SaveConfig(*cfg)
+	if err := loadSourceConfig(tmpDir, cfg); err != nil {
+		logger.Log(false, "metadata: could not load scraper config from repo: %v", err)
+	}
+
+	if err := shared.SaveConfig(*cfg); err != nil {
+		spinner.Stop()
+		return fmt.Errorf("could not save config: %w", err)
+	}
 
 	spinner.Stop()
 
@@ -81,5 +90,25 @@ func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 	fmt.Println("\n✅ Saved metadata index to", path)
 
 	fmt.Println("✅ Metadata fetch and indexing complete.")
+	return nil
+}
+
+// loadSourceConfig reads config.json from the freshly cloned metadata repo and
+// populates cfg.Source (the scraper's site config) with it, so switching trackers
+// is a config change in the metadata repo rather than a code change here.
+func loadSourceConfig(tmpDir string, cfg *shared.Config) error {
+	cfgFile := filepath.Join(tmpDir, "config.json")
+
+	data, err := os.ReadFile(cfgFile)
+	if err != nil {
+		return fmt.Errorf("could not read %s: %w", cfgFile, err)
+	}
+
+	var srcConfig shared.ScraperConfig
+	if err := json.Unmarshal(data, &srcConfig); err != nil {
+		return fmt.Errorf("could not parse %s: %w", cfgFile, err)
+	}
+
+	cfg.Source = srcConfig
 	return nil
 }
