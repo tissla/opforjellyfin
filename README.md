@@ -16,7 +16,7 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 I've taken the time to finally update!
 Notable new features/bugfixes:
 1. Seeder-mode
-2. Quality files
+2. Quality filters
 3. Search-result caching
 4. Dynamic tmp-dir usage
 5. Further concurrency issue fixes 
