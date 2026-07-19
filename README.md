@@ -18,10 +18,9 @@ Notable new features/bugfixes:
 1. Seeder-mode
 2. Quality filters
 3. Search-result caching
-4. Dynamic tmp-dir usage
-5. Further concurrency issue fixes 
-6. A bug where 'sync' would spam missing metadata shamelessly
-7. Download progress bars would sometimes swap places mid-download, making the CLI look glitchy
+4. Further concurrency issue fixes 
+5. A bug where 'sync' would spam missing metadata shamelessly
+6. Download progress bars would sometimes swap places mid-download, making the CLI look glitchy
 
 And more!
 Don't hesitate to post issues as you find them.
@@ -68,7 +67,7 @@ You can choose to either use one of the released versions or build from source y
 
 For this program to work, you need to have 'git' installed.
 
-### [Releases](https://github.com/tissla/opforjellyfin/releases/tag/v1.0.0)
+### [Releases](https://github.com/tissla/opforjellyfin/releases/tag/v1.1.0)
 
 MacOS / Linux:
 
