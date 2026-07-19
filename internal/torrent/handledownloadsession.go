@@ -33,7 +33,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		logger.Log(true, "\n🛑 Received interrupt signal, cancelling downloads...")
+		logger.Log(true, "\n❌ Received interrupt signal, cancelling downloads...")
 		cancel()
 	}()
 
@@ -163,7 +163,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 	shared.ClearActiveDownloads()
 
 	if ctx.Err() != nil {
-		logger.Log(true, "\n❌ Downloads cancelled by user.")
+		logger.Log(true, "\n❌ Downloads cancelled.")
 	} else {
 		logger.Log(true, "\n✅ All downloads finished and placed.")
 	}
