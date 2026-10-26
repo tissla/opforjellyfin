@@ -142,22 +142,22 @@ func fetchTorrentMeta(ctx context.Context, baseURL string, id int) (*metainfo.Me
 }
 
 func filesToDownload(t *torrent.Torrent, selected []string) ([]*torrent.File, error) {
-	if selected == nil {
-		return t.Files(), nil
-	}
 	wanted := make(map[string]bool, len(selected))
 	for _, filename := range selected {
 		wanted[filename] = true
 	}
 	var files []*torrent.File
 	for _, file := range t.Files() {
-		if wanted[file.Path()] {
+		if !shared.IsVideoFile(file.Path()) {
+			continue
+		}
+		if selected == nil || wanted[file.Path()] {
 			files = append(files, file)
 			delete(wanted, file.Path())
 		}
 	}
 	if len(wanted) > 0 || len(files) == 0 {
-		return nil, fmt.Errorf("selected files are missing from torrent")
+		return nil, fmt.Errorf("torrent has no matching .mkv or .mp4 files for this selection")
 	}
 	return files, nil
 }

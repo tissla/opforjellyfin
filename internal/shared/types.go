@@ -81,5 +81,5 @@ type TorrentEntry struct {
 	HaveIt        int    // 0 = none, 1 = some, 2 = all
 	Date          string //
 
-	SelectedFiles []string `json:"-"` // nil downloads the whole torrent
+	SelectedFiles []string `json:"-"` // nil selects all .mkv and .mp4 files
 }

@@ -30,8 +30,12 @@ func TestSelectedFilesCompleteWithoutRestOfBatch(t *testing.T) {
 	t.Cleanup(func() { client.Close() })
 	hashA, hashB := sha1.Sum([]byte("abcd")), sha1.Sum([]byte("efgh"))
 	infoBytes, err := bencode.Marshal(metainfo.Info{
-		Name: "Batch", PieceLength: 4, Pieces: append(hashA[:], hashB[:]...),
-		Files: []metainfo.FileInfo{{Path: []string{"A.mkv"}, Length: 4}, {Path: []string{"B.mkv"}, Length: 4}},
+		Name: "Batch", PieceLength: 4, Pieces: append(append(hashA[:], hashB[:]...), hashB[:]...),
+		Files: []metainfo.FileInfo{
+			{Path: []string{"A.mkv"}, Length: 4},
+			{Path: []string{"B.MP4"}, Length: 4},
+			{Path: []string{"episode.mkv.exe"}, Length: 4},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -52,10 +56,13 @@ func TestSelectedFilesCompleteWithoutRestOfBatch(t *testing.T) {
 	if err != nil || len(all) != 2 {
 		t.Fatalf("manual download: %v, error %v", all, err)
 	}
+	if all[0].Path() != "Batch/A.mkv" || all[1].Path() != "Batch/B.MP4" {
+		t.Fatalf("unexpected video selection: %v", all)
+	}
 	if _, complete := fileProgress(all); complete {
 		t.Fatal("whole torrent should still be incomplete")
 	}
-	for _, paths := range [][]string{{}, {"Batch/absent.mkv"}} {
+	for _, paths := range [][]string{{}, {"Batch/absent.mkv"}, {"Batch/episode.mkv.exe"}} {
 		if _, err := filesToDownload(tr, paths); err == nil {
 			t.Fatalf("invalid selection accepted: %v", paths)
 		}
