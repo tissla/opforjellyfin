@@ -25,9 +25,16 @@ Notable new features/bugfixes:
 And more!
 Don't hesitate to post issues as you find them.
 
-## Future plans:
+## Sort existing downloads
 
-1. 'sort' command - To target a directory containing files, and renaming/sorting them into your metadata directory.
+```bash
+./opfor sort "/path/to/downloads"
+./opfor sort "/path/to/episode.mkv"
+```
+
+Moves matched videos into their arc folders in the configured library, preserving filenames. Directories are searched recursively. Unmatched files and destination conflicts remain at their source paths. Known filename aliases receive matching NFO and thumbnail copies.
+
+Failed torrent placements remain under the library's `.opfor-tmp` directory and can be retried with `sort`. `clear` deletes temporary downloads, including those unplaced files.
 
 ## 📸 Examples
 

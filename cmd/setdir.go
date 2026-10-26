@@ -1,9 +1,6 @@
-// cmd/setDir.go
 package cmd
 
 import (
-	"fmt"
-	"log"
 	"opforjellyfin/internal/metadata"
 	"opforjellyfin/internal/shared"
 	"path/filepath"
