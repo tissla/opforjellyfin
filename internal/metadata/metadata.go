@@ -1,4 +1,4 @@
-// metadata/metadata.go
+// Package metadata
 package metadata
 
 import (
@@ -12,16 +12,6 @@ import (
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 )
-
-// BuildMetadataIndex constructs and caches metadata index.
-func BuildMetadataIndex(baseDir string) error {
-	index, err := buildIndexFromDir(baseDir)
-	if err != nil {
-		return err
-	}
-
-	return saveMetadataIndex(index, baseDir)
-}
 
 // FetchAllMetadata clones and indexes metadata from GitHub.
 func FetchAllMetadata(cfg *shared.Config) error {
@@ -80,9 +70,6 @@ func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 			spinner.Stop()
 			return err
 		}
-	} else if err := BuildMetadataIndex(baseDir); err != nil {
-		spinner.Stop()
-		return err
 	}
 
 	if err := loadSourceConfig(tmpDir, cfg); err != nil {

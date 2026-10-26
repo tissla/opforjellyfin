@@ -2,14 +2,13 @@ package shared
 
 // TODO: cleanup unused properties
 
-// config file
 type Config struct {
 	TargetDir  string        `json:"target_dir"`
 	GitHubRepo string        `json:"github_base_url"`
 	Source     ScraperConfig `json:"source"`
+	Thumbnails bool          `json:"thumbnails"`
 }
 
-// scrape config
 type ScraperConfig struct {
 	Name               string           `json:"name"`
 	BaseURL            string           `json:"base_url"`
@@ -32,24 +31,23 @@ type ValidationConfig struct {
 	RequiredInTitle string `json:"required_in_title"`
 }
 
-// Index maps seasons
 type MetadataIndex struct {
 	Seasons map[string]SeasonIndex `json:"seasons"`
 }
 
-// seasons maps episodes
+// SeasonIndex seasons maps episodes
 type SeasonIndex struct {
 	Range        string                 `json:"range"`
 	Name         string                 `json:"name"`
 	EpisodeRange map[string]EpisodeData `json:"episodes"`
 }
 
-// episodes maps titles and have
+// EpisodeData episodes maps titles and have
 type EpisodeData struct {
 	Title string `json:"title"`
 }
 
-// download struct
+// TorrentDownload download struct
 type TorrentDownload struct {
 	Title             string   // title for display
 	FullTitle         string   // full torrent title
@@ -63,7 +61,7 @@ type TorrentDownload struct {
 	Placed            bool     // set to true when files are placed, before clearing active downloads
 }
 
-// entry for dl
+// TorrentEntry entry for dl
 type TorrentEntry struct {
 	Title         string // full title
 	Quality       string // parsed quality

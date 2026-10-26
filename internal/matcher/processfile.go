@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// walks through downloaded files and tries to place them in correct dir
+// ProcessTorrentFiles walks through downloaded files and tries to place them in correct dir
 func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, index *shared.MetadataIndex) {
 	filesChecked := 0
 	filesPlaced := 0

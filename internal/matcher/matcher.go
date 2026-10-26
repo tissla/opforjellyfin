@@ -1,4 +1,4 @@
-// matcher/matcher.go
+// Package matcher
 package matcher
 
 import (
@@ -7,12 +7,54 @@ import (
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-// Matches video-file to metadata, then places it
+// MatchIndex maps video filename stems to Barry's metadata files.
+type MatchIndex struct {
+	ByFilename map[string]string       `json:"by_filename"`
+	Entries    map[string]MetadataFile `json:"entries"`
+}
+
+type MetadataFile struct {
+	NFOPath string `json:"nfo_path"`
+}
+
+// MatchFile returns the relative NFO path for a video filename.
+// Use its parent folder for placement and keep the video's original filename.
+func MatchFile(filename string, index *MatchIndex) (string, error) {
+	if index == nil {
+		return "", fmt.Errorf("metadata index is missing")
+	}
+
+	filename = path.Base(strings.ReplaceAll(filename, `\`, "/"))
+	ext := path.Ext(filename)
+	if !strings.EqualFold(ext, ".mkv") && !strings.EqualFold(ext, ".mp4") {
+		return "", fmt.Errorf("unsupported video filename: %s", filename)
+	}
+
+	id, found := index.ByFilename[strings.TrimSuffix(filename, ext)]
+	if !found {
+		return "", fmt.Errorf("no metadata for %s", filename)
+	}
+	entry, found := index.Entries[id]
+	if !found || id == "" {
+		return "", fmt.Errorf("metadata entry is missing for %s", filename)
+	}
+
+	nfoPath := entry.NFOPath
+	if path.Ext(nfoPath) != ".nfo" || path.IsAbs(nfoPath) ||
+		strings.HasPrefix(nfoPath, "../") || strings.ContainsAny(nfoPath, "\\:\x00") ||
+		path.Clean(nfoPath) != nfoPath {
+		return "", fmt.Errorf("invalid metadata path: %q", nfoPath)
+	}
+	return nfoPath, nil
+}
+
+// MatchAndPlaceVideo Matches video-file to metadata, then places it
 // No mutex needed here - shared.SafeMoveFile handles all locking
 func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataIndex, ogcr string) (string, error) {
 
@@ -48,7 +90,7 @@ func MatchAndPlaceVideo(videoPath, defaultDir string, index *shared.MetadataInde
 
 		// Add timestamp to filename to avoid collisions
 		nameWithoutExt := strings.TrimSuffix(fileName, ext)
-		timestamp := time.Now().Format("20060102-150405")
+		timestamp := time.Now().Format("20260102-120304")
 		strayFileName := fmt.Sprintf("%s_%s%s", nameWithoutExt, timestamp, ext)
 		strayPath := filepath.Join(strayDir, strayFileName)
 

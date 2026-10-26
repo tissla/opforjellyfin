@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// checks a range in metadata. 0 = does not have, 1 = have some, 2 = have all
+// HaveVideoStatus checks a range in metadata. 0 = does not have, 1 = have some, 2 = have all
 func HaveVideoStatus(chapterRange string) int {
 	if chapterRange == "" {
 		return 0
@@ -77,7 +77,7 @@ func HaveMetadata(chapterRange string) bool {
 	return false
 }
 
-// video and .nfo file counter. Returns: number of videos matched with episode .nfo file, number of episode .nfo files
+// CountVideosAndTotal video and .nfo file counter. Returns: number of videos matched with episode .nfo file, number of episode .nfo files
 func CountVideosAndTotal(dir string) (matched int, totalNFO int) {
 	videoFiles := map[string]bool{}
 
