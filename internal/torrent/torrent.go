@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	torrentlog "github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
 )
@@ -40,6 +41,8 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool, se
 	cfg.NoUpload = !seed
 	cfg.Seed = seed // upload even once we have nothing left to gain ourselves
 	cfg.ListenPort = 0
+	cfg.Logger = torrentlog.NewLogger("torrent")
+	cfg.Logger.SetHandlers(torrentlog.StreamHandler{W: logger.NewDebugLogWriter(), Fmt: torrentlog.LineFormatter})
 
 	client, err := torrent.NewClient(cfg)
 	if err != nil {
@@ -107,12 +110,12 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool, se
 	logger.Log(false, "Torrent contains %d files", len(t.Files()))
 
 	td.Done = true
-	td.PlacementProgress = "⏳ Waiting to place.."
+	td.PlacementProgress = "Waiting to place"
 	shared.SaveTorrentDownload(td)
 	logger.Log(false, "Download complete: %s", td.Title)
 
 	if seed {
-		td.PlacementProgress = "🌱 Seeding until stopped (Ctrl+C)..."
+		td.PlacementProgress = "Seeding (Ctrl+C to stop)"
 		shared.SaveTorrentDownload(td)
 		<-ctx.Done()
 		logger.Log(false, "Stopped seeding: %s", td.Title)

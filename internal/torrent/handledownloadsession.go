@@ -58,9 +58,13 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 		}
 		dKey := ui.StyleFactory(fmt.Sprintf("%4d", entry.DownloadKey), ui.Style.Pink)
 		title := ui.StyleFactory(entry.TorrentName, ui.Style.LBlue)
+		displayTitle := fmt.Sprintf("%s: %s", dKey, title)
+		if entry.Quality != "" && entry.Quality != "n/a" {
+			displayTitle += fmt.Sprintf(" (%s)", entry.Quality)
+		}
 
 		td := &shared.TorrentDownload{
-			Title:        fmt.Sprintf("%s: %s (%s)", dKey, title, entry.Quality),
+			Title:        displayTitle,
 			TorrentID:    entry.TorrentID,
 			FullTitle:    entry.Title,
 			ChapterRange: entry.ChapterRange,
@@ -75,6 +79,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 
 	// Start UI progress monitoring
 	doneChan := make(chan struct{})
+	logger.BufferUserOutput(true)
 	go ui.FollowProgress(doneChan)
 
 	// Create work queue
@@ -113,13 +118,13 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 
 					if err != nil && !seedingStoppedAfterSuccess {
 						if err == context.DeadlineExceeded {
-							logger.Log(true, "Download timeout for %s (no progress in 30 min)", td.Title)
-							td.PlacementProgress = "❌ Timeout - no seeders?"
+							logger.Log(true, "Download timed out after 30 minutes: %s", td.Title)
+							td.PlacementProgress = "Timed out"
 						} else if err == context.Canceled {
-							td.PlacementProgress = "❌ Cancelled"
+							td.PlacementProgress = "Cancelled"
 						} else {
 							logger.Log(true, "Download failed for %s: %v", td.Title, err)
-							td.PlacementProgress = "❌ Failed"
+							td.PlacementProgress = "Failed"
 						}
 						shared.SaveTorrentDownload(td)
 						shared.RemoveActiveDownload(td.TorrentID)
