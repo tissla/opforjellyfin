@@ -11,10 +11,12 @@ import (
 )
 
 var (
-	debugEnabled bool
-	debugFile    *os.File
-	debugLogger  *log.Logger // logger used by all
-	logMu        sync.Mutex  // for the log-function
+	debugEnabled      bool
+	debugFile         *os.File
+	debugLogger       *log.Logger // logger used by all
+	logMu             sync.Mutex  // for the log-function
+	bufferUserOutput  bool
+	pendingUserOutput strings.Builder
 )
 
 // always enabled
@@ -33,16 +35,38 @@ func EnableDebugLogging() {
 
 // threadsafe logger
 func Log(showUser bool, format string, args ...any) {
+	logMu.Lock()
+	defer logMu.Unlock()
 	if showUser {
-		fmt.Printf(format+"\n", args...)
+		if bufferUserOutput {
+			fmt.Fprintf(&pendingUserOutput, format+"\n", args...)
+		} else {
+			fmt.Printf(format+"\n", args...)
+		}
 	}
 
 	if debugEnabled && debugFile != nil {
-		logMu.Lock()
-		defer logMu.Unlock()
-
 		debugLogger.Printf(format, args...)
 	}
+}
+
+// BufferUserOutput lets the progress view own terminal output while it is active.
+func BufferUserOutput(enabled bool) {
+	logMu.Lock()
+	defer logMu.Unlock()
+	bufferUserOutput = enabled
+	if !enabled {
+		fmt.Print(pendingUserOutput.String())
+		pendingUserOutput.Reset()
+	}
+}
+
+func TakeUserOutput() string {
+	logMu.Lock()
+	defer logMu.Unlock()
+	output := pendingUserOutput.String()
+	pendingUserOutput.Reset()
+	return output
 }
 
 // shows entries in debug.log if there are any (n = number of lines)

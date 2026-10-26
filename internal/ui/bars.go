@@ -6,78 +6,73 @@ import (
 	"opforjellyfin/internal/shared"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func FollowProgress(doneChan chan struct{}) {
-	first := true
 	ticker := time.NewTicker(300 * time.Millisecond)
 	defer ticker.Stop()
+	logger.BufferUserOutput(true)
+
+	previous, rows := "", 0
+	draw := func() {
+		downloads := shared.GetActiveDownloads()
+		frame := renderAllBars(downloads)
+		messages := logger.TakeUserOutput()
+		if frame == previous && messages == "" {
+			return
+		}
+
+		var output strings.Builder
+		if rows > 0 {
+			fmt.Fprintf(&output, "\033[%dA", rows)
+		}
+		output.WriteString("\r")
+		output.WriteString(strings.ReplaceAll(messages, "\n", "\033[K\r\n"))
+		output.WriteString(frame)
+		output.WriteString("\r\033[J")
+		fmt.Print(output.String())
+		previous, rows = frame, len(downloads)
+	}
 
 	for {
 		select {
 		case <-ticker.C:
-			downloads := shared.GetActiveDownloads()
-			num := len(downloads)
-
-			// print initial lines
-			if first {
-				for i := 0; i < num+1; i++ {
-					fmt.Print("\n")
-				}
-				first = false
-			}
-
-			// +1 for the marker, +1 for the trailing \n in renderAllBars
-			ClearLines(num + 2)
-
-			// render current status
-			renderAllBars(downloads)
-
+			draw()
 		case <-doneChan:
-			downloads := shared.GetActiveDownloads()
-			num := len(downloads)
-			ClearLines(num + 2)
-			renderAllBars(downloads)
-			logger.Log(false, "ALLDONE! UI shutting down.")
-
-			// callback wedone
+			draw()
+			logger.BufferUserOutput(false)
 			doneChan <- struct{}{}
 			return
 		}
 	}
 }
 
-// render bars
 func renderSingleBar(title, msg string, progress, total int64, titlewidth, barwidth int) string {
-	if total == 0 {
-		return fmt.Sprintf("%s [%s] %s", AnsiPadRight(title, titlewidth), strings.Repeat("░", barwidth), AnsiPadLeft("0%", 4))
+	percent := 0.0
+	if total > 0 {
+		percent = min(1.0, max(0.0, float64(progress)/float64(total)))
 	}
-	percent := float64(progress) / float64(total)
 	filled := int(percent * float64(barwidth))
 	bar := strings.Repeat("█", filled) + strings.Repeat("░", barwidth-filled)
-
-	maxW := GetTerminalWidth()
-
 	percentStr := fmt.Sprintf("%3.0f%%", percent*100)
 	if percent >= 1.0 {
 		percentStr = " ✅ "
 	}
-
-	outMsg := msg
 	if msg != "" {
-		outMsg = "| " + msg
+		msg = "| " + msg
 	}
-
-	output := fmt.Sprintf("%s [%s] %s %s", AnsiPadRight(title, titlewidth), bar, AnsiPadLeft(percentStr, 4), outMsg)
-	return AnsiPadRight(output, maxW)
+	output := fmt.Sprintf("%s [%s] %s %s", AnsiPadRight(title, titlewidth), bar, AnsiPadLeft(percentStr, 4), msg)
+	// Leave the last column free to avoid terminal line wrapping.
+	return ansi.Truncate(output, max(0, GetTerminalWidth()-1), "")
 }
 
-// renderall
-func renderAllBars(downloads []*shared.TorrentDownload) {
-	allbars := ""
+func renderAllBars(downloads []*shared.TorrentDownload) string {
+	var frame strings.Builder
 	for _, td := range downloads {
 		bar := renderSingleBar(td.Title, td.PlacementProgress, td.Progress, td.TotalSize, 15, 40)
-		allbars = allbars + bar + "\n"
+		fmt.Fprintf(&frame, "\r%s\033[K\n", bar)
 	}
-	PrintMultiline(allbars)
+	return frame.String()
 }
