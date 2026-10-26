@@ -50,7 +50,12 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 
 	// Prepare all download metadata first
 	allTDs := []*shared.TorrentDownload{}
+	totalVideos, totalKnown := 0, true
 	for _, entry := range entries {
+		totalVideos += len(entry.SelectedFiles)
+		if entry.SelectedFiles == nil {
+			totalKnown = false
+		}
 		dKey := ui.StyleFactory(fmt.Sprintf("%4d", entry.DownloadKey), ui.Style.Pink)
 		title := ui.StyleFactory(entry.TorrentName, ui.Style.LBlue)
 
@@ -63,6 +68,10 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 
 		allTDs = append(allTDs, td)
 	}
+	if !totalKnown {
+		totalVideos = 0
+	}
+	shared.SetDownloadTotal(totalVideos)
 
 	// Start UI progress monitoring
 	doneChan := make(chan struct{})

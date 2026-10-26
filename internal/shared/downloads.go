@@ -15,7 +15,29 @@ import (
 var (
 	activeDownloads = make(map[int]TorrentDownload)
 	mu              sync.RWMutex
+	totalVideos     int
+	placedVideos    int
 )
+
+func SetDownloadTotal(total int) {
+	mu.Lock()
+	defer mu.Unlock()
+	totalVideos, placedVideos = total, 0
+}
+
+func RecordPlacedVideo() {
+	mu.Lock()
+	defer mu.Unlock()
+	if placedVideos < totalVideos {
+		placedVideos++
+	}
+}
+
+func GetDownloadProgress() (placed, total int) {
+	mu.RLock()
+	defer mu.RUnlock()
+	return placedVideos, totalVideos
+}
 
 func SaveTorrentDownload(td *TorrentDownload) {
 	mu.Lock()
@@ -60,6 +82,7 @@ func ClearActiveDownloads() {
 	mu.Lock()
 	defer mu.Unlock()
 	activeDownloads = make(map[int]TorrentDownload)
+	totalVideos, placedVideos = 0, 0
 }
 
 func CleanupTempDirs() error {

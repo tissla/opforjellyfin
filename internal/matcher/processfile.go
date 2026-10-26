@@ -52,6 +52,8 @@ func ProcessTorrentFiles(outDir string, td *shared.TorrentDownload, index *share
 		if err != nil {
 			failed++
 			message = fmt.Sprintf("Left in %s: %v", videoPath, err)
+		} else {
+			shared.RecordPlacedVideo()
 		}
 		if message != "" {
 			td.PlacementFull = append(td.PlacementFull, message)

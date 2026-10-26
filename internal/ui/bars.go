@@ -19,6 +19,9 @@ func FollowProgress(doneChan chan struct{}) {
 	draw := func() {
 		downloads := shared.GetActiveDownloads()
 		frame := renderAllBars(downloads)
+		if placed, total := shared.GetDownloadProgress(); total > 0 {
+			frame += fmt.Sprintf("\r%s\033[K\n", renderTotalBar(placed, total))
+		}
 		messages := logger.TakeUserOutput()
 		if frame == previous && messages == "" {
 			return
@@ -33,7 +36,7 @@ func FollowProgress(doneChan chan struct{}) {
 		output.WriteString(frame)
 		output.WriteString("\r\033[J")
 		fmt.Print(output.String())
-		previous, rows = frame, len(downloads)
+		previous, rows = frame, strings.Count(frame, "\n")
 	}
 
 	for {
@@ -47,6 +50,18 @@ func FollowProgress(doneChan chan struct{}) {
 			return
 		}
 	}
+}
+
+func renderTotalBar(placed, total int) string {
+	counts := fmt.Sprintf("%d/%d episodes | %d remaining", placed, total, max(0, total-placed))
+	width := max(0, GetTerminalWidth()-1)
+	barWidth := min(24, max(0, width-ansi.StringWidth(counts)-len("Total [] ")))
+	filled := 0
+	if total > 0 {
+		filled = barWidth * min(total, max(0, placed)) / total
+	}
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled)
+	return ansi.Truncate(fmt.Sprintf("Total [%s] %s", bar, counts), width, "")
 }
 
 func renderSingleBar(title, msg string, progress, total int64, titlewidth, barwidth int) string {
