@@ -9,9 +9,20 @@ import (
 	"sync"
 )
 
+const MetadataRepo = "tissla/opfor-metadata-barrys"
+
+var defaultSource = ScraperConfig{
+	Name: "nyaa", BaseURL: "https://nyaa.si",
+	SearchPathTemplate: "/?f=0&c=1_2&q=%s&p=%d", SearchQuery: "one+pace",
+	RowSelector: "table tbody tr",
+	Fields:      ScraperFields{Title: "td:nth-child(2) a:last-child", Seeders: "td:nth-child(6)", TorrentLink: "td:nth-child(3) a[href^='/download/']", TorrentID: `/download/(\d+)`, UploadDate: "td:nth-child(5)"},
+	Validation:  ValidationConfig{RequiredInTitle: "one pace"},
+}
+
 var defaultCfg = Config{
 	TargetDir:  "",
-	GitHubRepo: "tissla/one-pace-jellyfin",
+	GitHubRepo: MetadataRepo,
+	Source:     defaultSource,
 	Thumbnails: false,
 }
 
@@ -35,6 +46,10 @@ func LoadConfig() (*Config, error) {
 		var cfg Config
 		if err := json.Unmarshal(data, &cfg); err != nil {
 			configLoadError = err
+		}
+		cfg.GitHubRepo = MetadataRepo
+		if cfg.Source.BaseURL == "" {
+			cfg.Source = defaultSource
 		}
 		globalConfig = &cfg
 	})

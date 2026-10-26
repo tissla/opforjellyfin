@@ -1,121 +1,97 @@
 package metadata
 
 import (
-	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
 
-// HaveVideoStatus checks a range in metadata. 0 = does not have, 1 = have some, 2 = have all
-func HaveVideoStatus(chapterRange string) int {
-	if chapterRange == "" {
+// HaveVideoStatus reports none (0), some (1), or all (2) for an episode or arc title.
+func HaveVideoStatus(title string) int {
+	index, err := LoadMetadataCache()
+	if err != nil {
 		return 0
 	}
-
-	index := LoadMetadataCache()
-	cfg, _ := shared.LoadConfig()
-	baseDir := cfg.TargetDir
-
-	for seasonKey, season := range index.Seasons {
-		seasonDir := filepath.Join(baseDir, seasonKey)
-
-		if season.Range == chapterRange {
-			v, n := CountVideosAndTotal(seasonDir)
-			logger.Log(false, "HaveVideoStatus: counted %d videos and %d nfos for seasonKey: %s", v, n, seasonKey)
-			if v == 0 {
-				return 0
-			}
-
-			if v < n {
-				return 1
-			}
-
+	cfg, err := shared.LoadConfig()
+	if err != nil {
+		return 0
+	}
+	if shared.IsVideoFile(title) {
+		title = strings.TrimSuffix(title, filepath.Ext(title))
+	}
+	if id, ok := index.ByFilename[title]; ok {
+		entry, exists := index.Entries[id]
+		if !exists {
+			return 0
+		}
+		dir := filepath.Join(cfg.TargetDir, filepath.FromSlash(path.Dir(entry.NFOPath)))
+		if videoEntries(dir, index)[id] {
 			return 2
 		}
-
-		for epRange, epData := range season.EpisodeRange {
-			if epRange == chapterRange {
-				videoPathMP4 := filepath.Join(seasonDir, epData.Title+".mp4")
-				videoPathMKV := filepath.Join(seasonDir, epData.Title+".mkv")
-
-				if shared.FileExists(videoPathMP4) || shared.FileExists(videoPathMKV) {
-					return 2
-				}
+		return 0
+	}
+	for _, arc := range index.Arcs {
+		if arc.Folder == title {
+			matched, total := CountVideosAndTotal(filepath.Join(cfg.TargetDir, arc.Folder))
+			if matched == 0 {
+				return 0
 			}
-
+			if matched < total {
+				return 1
+			}
+			return 2
 		}
 	}
-
 	return 0
 }
 
-// HaveMetadata checks if metadata exists for given chapterRange.
-func HaveMetadata(chapterRange string) bool {
-	if chapterRange == "" {
+func HaveMetadata(title string) bool {
+	index, err := LoadMetadataCache()
+	if err != nil {
 		return false
 	}
-
-	LoadMetadataCache()
-	norm := shared.NormalizeDash(chapterRange)
-
-	for _, season := range metadataCache.Seasons {
-		// season range match instantly
-		if shared.NormalizeDash(season.Range) == norm {
+	if shared.IsVideoFile(title) {
+		title = strings.TrimSuffix(title, filepath.Ext(title))
+	}
+	if _, exists := index.ByFilename[title]; exists {
+		return true
+	}
+	for _, arc := range index.Arcs {
+		if arc.Folder == title {
 			return true
 		}
-
-		// match individual episodes
-		for epRange := range season.EpisodeRange {
-			if shared.NormalizeDash(epRange) == norm {
-				return true
-			}
-		}
 	}
-
 	return false
 }
 
-// CountVideosAndTotal video and .nfo file counter. Returns: number of videos matched with episode .nfo file, number of episode .nfo files
-func CountVideosAndTotal(dir string) (matched int, totalNFO int) {
-	videoFiles := map[string]bool{}
-
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		lower := strings.ToLower(d.Name())
-		base := strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
-
-		if strings.HasSuffix(lower, ".mkv") || strings.HasSuffix(lower, ".mp4") {
-			videoFiles[base] = false
-		}
-
-		if shared.IsEpisodeNFO(lower) {
-			totalNFO++
-			if _, exists := videoFiles[base]; exists {
-				videoFiles[base] = true //
-			}
-		}
-
-		return nil
-	})
-
+// CountVideosAndTotal counts indexed episodes, so alias sidecars are not counted twice.
+func CountVideosAndTotal(dir string) (matched int, total int) {
+	index, err := LoadMetadataCache()
 	if err != nil {
 		return 0, 0
 	}
-
-	// count matched
-	for _, matchedFlag := range videoFiles {
-		if matchedFlag {
-			matched++
+	for _, entry := range index.Entries {
+		if path.Dir(entry.NFOPath) == filepath.Base(dir) {
+			total++
 		}
 	}
+	return len(videoEntries(dir, index)), total
+}
 
-	return matched, totalNFO
+func videoEntries(dir string, index *shared.MetadataIndex) map[string]bool {
+	found := make(map[string]bool)
+	files, _ := os.ReadDir(dir)
+	for _, file := range files {
+		if !file.Type().IsRegular() || !shared.IsVideoFile(file.Name()) {
+			continue
+		}
+		stem := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+		id, exists := index.ByFilename[stem]
+		if exists && path.Dir(index.Entries[id].NFOPath) == filepath.Base(dir) {
+			found[id] = true
+		}
+	}
+	return found
 }

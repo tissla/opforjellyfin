@@ -32,19 +32,19 @@ type ValidationConfig struct {
 }
 
 type MetadataIndex struct {
-	Seasons map[string]SeasonIndex `json:"seasons"`
+	ByFilename map[string]string       `json:"by_filename"`
+	Entries    map[string]MetadataFile `json:"entries"`
+	Arcs       map[string]MetadataArc  `json:"arcs"`
 }
 
-// SeasonIndex seasons maps episodes
-type SeasonIndex struct {
-	Range        string                 `json:"range"`
-	Name         string                 `json:"name"`
-	EpisodeRange map[string]EpisodeData `json:"episodes"`
+type MetadataFile struct {
+	NFOPath string `json:"nfo_path"`
 }
 
-// EpisodeData episodes maps titles and have
-type EpisodeData struct {
-	Title string `json:"title"`
+type MetadataArc struct {
+	Folder       string `json:"folder"`
+	Name         string `json:"name"`
+	SeasonNumber int    `json:"season_number"`
 }
 
 // TorrentDownload download struct
@@ -59,6 +59,7 @@ type TorrentDownload struct {
 	PlacementProgress string   //used for placement messages after download is done
 	Done              bool     // set to true when torrent is downloaded
 	Placed            bool     // set to true when files are placed, before clearing active downloads
+	VideoPaths        []string // actual files listed by the torrent
 }
 
 // TorrentEntry entry for dl
@@ -68,12 +69,12 @@ type TorrentEntry struct {
 	DownloadKey   int    // download key set by rawIndex
 	TorrentName   string // for display
 	Seeders       int    // number of seeders
-	RawIndex      int    // RawIndex is based on ChapterRange, used for placement
+	RawIndex      int    // sort order in search results
 	TorrentLink   string // torrent link
 	TorrentID     int    // torrent ID, extracted from link
 	ChapterRange  string // torrent chapter range
-	MetaDataAvail bool   // metadata matching chapter range exists
+	MetaDataAvail bool   // metadata exists for the episode or arc title
 	IsSpecial     bool   // is a special (no chapter range)
-	HaveIt        int    // video with same chapter range exists
+	HaveIt        int    // 0 = none, 1 = some, 2 = all
 	Date          string //
 }

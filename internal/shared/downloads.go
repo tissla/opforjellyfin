@@ -47,12 +47,11 @@ func GetActiveDownloads() []*TorrentDownload {
 	return list
 }
 
-// clear cache and remove temp download directories
+// Clear in-memory download state; unfinished files remain available for retry.
 func ClearActiveDownloads() {
 	mu.Lock()
 	defer mu.Unlock()
 	activeDownloads = make(map[int]*TorrentDownload)
-	CleanupTempDirs()
 }
 
 func CleanupTempDirs() error {

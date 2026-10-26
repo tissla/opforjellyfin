@@ -68,37 +68,37 @@ func CreateTempTorrentDir(torrentID int) (string, error) {
 	return tmpDir, nil
 }
 
-// SafeMoveFile moves a file safely, creates the directory if it does not exist
-// This function should be thread-safe and handle concurrent file operations
+// SafeMoveFile copies then removes the source, without overwriting a destination.
 func SafeMoveFile(src, dst string) error {
-	// Lock for the entire move operation to ensure atomicity
 	dirMutex.Lock()
 	defer dirMutex.Unlock()
-
-	logger.Log(false, "smf: starting move from %s to %s", src, dst)
-
-	// Ensure destination directory exists
-	dstDir := filepath.Dir(dst)
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		logger.Log(true, "smf: failed to create dst dir: %v", err)
+	in, err := os.Open(src)
+	if err != nil {
 		return err
 	}
-
-	logger.Log(false, "smf: copying file from %s to %s", src, dst)
-	if err := copyFileInternal(src, dst, 0644); err != nil {
-		logger.Log(true, "smf: copyFile failed: %v", err)
+	defer in.Close()
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
 	}
-	logger.Log(false, "smf: copyFile succeeded")
-
-	logger.Log(false, "smf: removing source file: %s", src)
-	if err := os.Remove(src); err != nil {
-		logger.Log(true, "smf: failed to remove src: %v", err)
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
 		return err
 	}
-	logger.Log(false, "smf: source file removed")
+	_, copyErr := io.Copy(out, in)
+	closeErr := out.Close()
+	if copyErr != nil || closeErr != nil {
+		os.Remove(dst)
+		return errors.Join(copyErr, closeErr)
+	}
+	if err := in.Close(); err != nil {
+		return err
+	}
+	return os.Remove(src)
+}
 
-	return nil
+func IsVideoFile(filename string) bool {
+	ext := filepath.Ext(filename)
+	return strings.EqualFold(ext, ".mkv") || strings.EqualFold(ext, ".mp4")
 }
 
 // copyFileInternal is the internal non-locked version for use within already locked functions

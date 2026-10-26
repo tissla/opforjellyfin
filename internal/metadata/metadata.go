@@ -7,13 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
 )
 
-// FetchAllMetadata clones and indexes metadata from GitHub.
+// FetchAllMetadata downloads the metadata and its generated index.
 func FetchAllMetadata(cfg *shared.Config) error {
 	return cloneAndCopyRepo(cfg, false)
 }
@@ -23,7 +24,7 @@ func SyncMetadata(cfg *shared.Config) error {
 	return cloneAndCopyRepo(cfg, true)
 }
 
-// Main dataobtainer, builds or rebuilds index when complete.
+// Copy the metadata repository into the configured library.
 func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 
 	baseDir := cfg.TargetDir
@@ -32,22 +33,29 @@ func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 	if err != nil {
 		return err
 	}
-	tmpDir := filepath.Join(tmpBase, "repo-tmp")
+	tmpDir, err := os.MkdirTemp(tmpBase, "repo-")
+	if err != nil {
+		return err
+	}
 	defer os.RemoveAll(tmpDir)
 
-	repo := fmt.Sprintf("https://github.com/%s.git", cfg.GitHubRepo)
+	repo := fmt.Sprintf("https://github.com/%s.git", shared.MetadataRepo)
 
 	fmt.Printf("%s", "🌐 Fetching metadata from "+repo+"\n")
 
 	spinner := ui.NewSpinner("🗃️ Downloading.. ", ui.Animations["MetaFetcher"])
 
-	if err = exec.Command("git", "clone", "--depth=1", repo, tmpDir).Run(); err != nil {
+	if err = cloneMetadata(repo, tmpDir, cfg.Thumbnails); err != nil {
 		spinner.Stop()
-		fmt.Println("⚠️  Git clone failed: %w", err)
 		return err
 	}
 
 	srcDir := filepath.Join(tmpDir, "One Pace")
+	index, err := readIndex(srcDir)
+	if err != nil {
+		spinner.Stop()
+		return err
+	}
 
 	if syncOnly {
 		err = shared.SyncDir(srcDir, baseDir)
@@ -60,17 +68,8 @@ func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 		return err
 	}
 
-	// If the metadata repo ships its own pre-built metadata-index.json inside
-	// "One Pace", CopyDir/SyncDir already copied it into baseDir above - use it
-	// directly instead of re-deriving it from every .nfo file via regex on this
-	// machine. Falls back to building it locally for repos that don't ship one.
-	if shared.FileExists(filepath.Join(srcDir, "metadata-index.json")) {
-		logger.Log(false, "metadata: using prebuilt metadata-index.json shipped by the repo")
-		if err := loadIndexIntoCache(baseDir); err != nil {
-			spinner.Stop()
-			return err
-		}
-	}
+	metadataCache = index
+	metadataCacheErr = nil
 
 	if err := loadSourceConfig(tmpDir, cfg); err != nil {
 		logger.Log(false, "metadata: could not load scraper config from repo: %v", err)
@@ -86,7 +85,32 @@ func cloneAndCopyRepo(cfg *shared.Config, syncOnly bool) error {
 	path := filepath.Join(baseDir, "metadata-index.json")
 	fmt.Println("\n✅ Saved metadata index to", path)
 
-	fmt.Println("✅ Metadata fetch and indexing complete.")
+	fmt.Println("✅ Metadata sync complete.")
+	return nil
+}
+
+// Exclude thumbnail blobs before checkout so they are never requested.
+func cloneMetadata(repo, dir string, thumbnails bool) error {
+	args := []string{"clone", "--depth=1"}
+	if !thumbnails {
+		args = append(args, "--filter=blob:none", "--no-checkout")
+	}
+	args = append(args, repo, dir)
+	if output, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("git clone: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	if thumbnails {
+		return nil
+	}
+
+	sparse := exec.Command("git", "-C", dir, "sparse-checkout", "set", "--no-cone", "--stdin")
+	sparse.Stdin = strings.NewReader("/*\n!*-thumb.png\n!*-thumb.jpg\n")
+	if output, err := sparse.CombinedOutput(); err != nil {
+		return fmt.Errorf("select metadata files: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	if output, err := exec.Command("git", "-C", dir, "checkout", "HEAD").CombinedOutput(); err != nil {
+		return fmt.Errorf("checkout metadata: %w: %s", err, strings.TrimSpace(string(output)))
+	}
 	return nil
 }
 

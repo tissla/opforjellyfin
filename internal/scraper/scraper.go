@@ -134,9 +134,9 @@ func parseRow(s *goquery.Selection, config *shared.ScraperConfig, baseURL string
 		torrentLink = baseURL + torrentLink
 	}
 
-	metaDataAvail := metadata.HaveMetadata(chapterRange)
+	metaDataAvail := metadata.HaveMetadata(title)
 
-	videoStatus := metadata.HaveVideoStatus(chapterRange)
+	videoStatus := metadata.HaveVideoStatus(title)
 
 	return shared.TorrentEntry{
 		Title:         title,

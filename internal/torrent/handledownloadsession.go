@@ -38,7 +38,11 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 	}()
 
 	// Load metadata index once
-	metadataIndex := metadata.LoadMetadataCache()
+	metadataIndex, err := metadata.LoadMetadataCache()
+	if err != nil {
+		logger.Log(true, "%v", err)
+		return
+	}
 
 	// Prepare all download metadata first
 	allTDs := []*shared.TorrentDownload{}
@@ -111,14 +115,15 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 
 					tmpBase, err := shared.GetTempDir()
 					if err != nil {
-						logger.Log(false, "failed to find temp dir: %v", err)
+						logger.Log(true, "failed to find temp dir: %v", err)
+						placementResults <- td
+						continue
 					}
 					// Place immediately after download completes
 					tmpDir := filepath.Join(tmpBase, fmt.Sprintf("opfor-tmp-%d", td.TorrentID))
-					matcher.ProcessTorrentFiles(tmpDir, outDir, td, metadataIndex)
-
-					// Clean up temp directory immediately
-					if err := os.RemoveAll(tmpDir); err != nil {
+					if err := matcher.ProcessTorrentFiles(outDir, td, metadataIndex); err != nil {
+						logger.Log(true, "%v; retained download in %s", err, tmpDir)
+					} else if err := os.RemoveAll(tmpDir); err != nil {
 						logger.Log(false, "Failed to remove temp dir %s: %v", tmpDir, err)
 					}
 
@@ -160,10 +165,18 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 		}
 	}
 
+	allPlaced := true
+	for _, td := range placedTorrents {
+		if !td.Placed {
+			allPlaced = false
+		}
+	}
 	shared.ClearActiveDownloads()
 
 	if ctx.Err() != nil {
 		logger.Log(true, "\n❌ Downloads cancelled.")
+	} else if !allPlaced {
+		logger.Log(true, "\nSome downloads could not be placed. Remaining files were kept in .opfor-tmp.")
 	} else {
 		logger.Log(true, "\n✅ All downloads finished and placed.")
 	}

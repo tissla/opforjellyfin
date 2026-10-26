@@ -2,92 +2,67 @@ package matcher
 
 import (
 	"fmt"
-	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-// ProcessTorrentFiles walks through downloaded files and tries to place them in correct dir
-func ProcessTorrentFiles(tmpDir, outDir string, td *shared.TorrentDownload, index *shared.MetadataIndex) {
-	filesChecked := 0
-	filesPlaced := 0
-	var lastError error
-
-	// collect all paths
-	td.PlacementProgress = fmt.Sprintf("🔧 Finding files to place %s", tmpDir)
-
-	var vidPaths []string
-	err := filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+// FindVideoFiles accepts a single video or collects videos from a directory.
+func FindVideoFiles(source string) ([]string, error) {
+	info, err := os.Lstat(source)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		if info.Mode().IsRegular() && shared.IsVideoFile(source) {
+			return []string{source}, nil
+		}
+		return nil, fmt.Errorf("not a video file or directory: %s", source)
+	}
+	var paths []string
+	err = filepath.WalkDir(source, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
-			logger.Log(true, "Failed walking file: %v", err)
+			return err
+		}
+		if entry.IsDir() {
+			if path != source && (entry.Name() == ".opfor-tmp" || entry.Name() == ".git") {
+				return filepath.SkipDir
+			}
 			return nil
 		}
-		if info.IsDir() || (!strings.HasSuffix(strings.ToLower(info.Name()), ".mkv") && !strings.HasSuffix(strings.ToLower(info.Name()), ".mp4")) {
-			return nil
+		if entry.Type().IsRegular() && shared.IsVideoFile(entry.Name()) {
+			paths = append(paths, path)
 		}
-		logger.Log(false, "added path: %s", path)
-		vidPaths = append(vidPaths, path)
 		return nil
 	})
+	return paths, err
+}
 
-	if err != nil {
-		logger.Log(true, "Error walking tmpDir: %v", err)
-		return
+// ProcessTorrentFiles places the actual video paths supplied by the torrent.
+func ProcessTorrentFiles(outDir string, td *shared.TorrentDownload, index *shared.MetadataIndex) error {
+	if len(td.VideoPaths) == 0 {
+		td.PlacementProgress = "No video files found"
+		shared.SaveTorrentDownload(td)
+		return fmt.Errorf("no video files found in %s", td.FullTitle)
 	}
-
-	// Handle case where no video files found
-	if len(vidPaths) == 0 {
-		td.MarkPlaced("⚠️ No video files found to place!")
-		return
-	}
-
-	for _, path := range vidPaths {
-		logger.Log(false, "→ Found: %s", path)
-		filesChecked++
-
-		// readable src for msg
-		fileName := filepath.Base(path)
-		readablePath := fileName
-		if len(fileName) > 10 {
-			readablePath = fileName[10:]
-		}
-
-		// upd msg
-		td.PlacementProgress = fmt.Sprintf("🔧 Placing ➝ %d/%d - %s", (filesPlaced + 1), len(vidPaths), readablePath)
-
-		// match and place
-		msg, err := MatchAndPlaceVideo(path, outDir, index, td.ChapterRange)
+	failed := 0
+	for i, videoPath := range td.VideoPaths {
+		td.PlacementProgress = fmt.Sprintf("Placing %d/%d", i+1, len(td.VideoPaths))
+		message, err := MatchAndPlaceVideo(videoPath, outDir, index)
 		if err != nil {
-			logger.Log(true, "Error placing file: %v", err)
-			lastError = err
-		} else if msg != "" {
-			filesPlaced++
-			//save msg for final summary
-			td.PlacementFull = append(td.PlacementFull, msg)
-			shared.SaveTorrentDownload(td)
+			failed++
+			message = fmt.Sprintf("Left in %s: %v", videoPath, err)
 		}
-	}
-
-	// Create appropriate message based on results
-	var placedMsg string
-
-	if filesPlaced == 0 && lastError != nil {
-		placedMsg = fmt.Sprintf("❌ Failed to place any files! Last error: %v", lastError)
-	} else if filesPlaced == 0 {
-		placedMsg = "❌ No files could be placed!"
-	} else if filesPlaced == len(vidPaths) {
-		if filesPlaced == 1 {
-			placedMsg = "✅ 1 file placed!"
-		} else {
-			placedMsg = fmt.Sprintf("✅ All %d files placed!", filesPlaced)
+		if message != "" {
+			td.PlacementFull = append(td.PlacementFull, message)
 		}
-	} else {
-		// Partial success
-		placedMsg = fmt.Sprintf("⚠️ %d/%d files placed!", filesPlaced, len(vidPaths))
+		shared.SaveTorrentDownload(td)
 	}
-
-	td.MarkPlaced(placedMsg)
-	logger.Log(false, "File placement done: %d checked, %d placed", filesChecked, filesPlaced)
+	if failed > 0 {
+		td.PlacementProgress = fmt.Sprintf("%d file(s) left in download directory", failed)
+		shared.SaveTorrentDownload(td)
+		return fmt.Errorf("%d file(s) could not be placed", failed)
+	}
+	td.MarkPlaced(fmt.Sprintf("%d video(s) placed", len(td.VideoPaths)))
+	return nil
 }

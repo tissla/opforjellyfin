@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
+	"path/filepath"
 	"time"
 
 	"github.com/anacrolix/torrent"
@@ -75,6 +76,14 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool) er
 		return fmt.Errorf("timeout waiting for torrent metadata")
 	case <-ctx.Done():
 		return ctx.Err()
+	}
+
+	// Use the torrent's file list for single episodes and batches.
+	td.VideoPaths = nil
+	for _, file := range t.Files() {
+		if shared.IsVideoFile(file.Path()) {
+			td.VideoPaths = append(td.VideoPaths, filepath.Join(tmpDir, filepath.FromSlash(file.Path())))
+		}
 	}
 
 	// start download
