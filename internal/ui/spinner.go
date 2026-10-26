@@ -2,84 +2,92 @@ package ui
 
 import (
 	"fmt"
+	"opforjellyfin/internal/logger"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
-// spinner struct
 type Spinner struct {
 	stop chan struct{}
 	done chan struct{}
+	once sync.Once
 }
 
-// spinner creator
 func NewSpinner(message string, frames []string) *Spinner {
-	s := &Spinner{
-		stop: make(chan struct{}),
-		done: make(chan struct{}),
-	}
-
-	go func() {
-		i := 0
-		for {
-			select {
-			case <-s.stop:
-				fmt.Print("\r")
-				s.done <- struct{}{}
-				return
-			default:
-				fmt.Printf("\r%s %s", message, frames[i%len(frames)])
-				time.Sleep(150 * time.Millisecond)
-				i++
-			}
-		}
-	}()
-
-	return s
+	return newSpinner(message, frames, 1, 150*time.Millisecond)
 }
 
-// send stop signal
-func (s *Spinner) Stop() {
-	close(s.stop)
-	<-s.done
-	ClearLines(1)
-}
-
-// Creates a multi-row spinner, AnimationFreames, Number of rows,
 func NewMultirowSpinner(frames []string, rows int) *Spinner {
+	return newSpinner("", frames, rows, 200*time.Millisecond)
+}
+
+func newSpinner(message string, frames []string, rows int, interval time.Duration) *Spinner {
 	if len(frames) == 0 {
 		frames = []string{"⏳"}
 	}
-
-	s := &Spinner{
-		stop: make(chan struct{}),
-		done: make(chan struct{}),
+	pictures := make([]string, len(frames))
+	height := max(1, rows)
+	for i, frame := range frames {
+		if message != "" {
+			frame = message + " " + frame
+		}
+		pictures[i] = strings.TrimRight(frame, "\n")
+		height = max(height, strings.Count(pictures[i], "\n")+1)
 	}
 
-	for i := 0; i < rows+1; i++ {
-		fmt.Print("\n")
-	}
-
+	s := &Spinner{stop: make(chan struct{}), done: make(chan struct{})}
+	logger.BufferUserOutput(true)
 	go func() {
-		i := 0
+		defer close(s.done)
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		previous, drawn, i := "", false, 0
+
 		for {
 			select {
 			case <-s.stop:
-				ClearLines(rows + 1)
-				s.done <- struct{}{}
+				if drawn {
+					fmt.Printf("\033[%dA\r\033[J", height)
+				}
+				logger.BufferUserOutput(false)
 				return
-			default:
-				frame := frames[i%len(frames)]
-				frameLineCount := strings.Count(frame, "\n") + 1
-				ClearLines(frameLineCount + 1)
-
-				PrintMultiline(frame)
-				time.Sleep(200 * time.Millisecond)
+			case <-ticker.C:
+				lines := strings.Split(pictures[i%len(pictures)], "\n")
 				i++
+				width := max(0, GetTerminalWidth()-1)
+				var frame strings.Builder
+				for row := 0; row < height; row++ {
+					line := ""
+					if row < len(lines) {
+						line = lines[row]
+					}
+					fmt.Fprintf(&frame, "\r%s\033[K\n", ansi.Truncate(line, width, ""))
+				}
+				next := frame.String()
+				messages := logger.TakeUserOutput()
+				if next == previous && messages == "" {
+					continue
+				}
 
+				var output strings.Builder
+				if drawn {
+					fmt.Fprintf(&output, "\033[%dA", height)
+				}
+				output.WriteString("\r")
+				output.WriteString(strings.ReplaceAll(messages, "\n", "\033[K\r\n"))
+				output.WriteString(next)
+				fmt.Print(output.String())
+				previous, drawn = next, true
 			}
 		}
 	}()
-
 	return s
+}
+
+func (s *Spinner) Stop() {
+	s.once.Do(func() { close(s.stop) })
+	<-s.done
 }

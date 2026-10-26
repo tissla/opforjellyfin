@@ -23,6 +23,7 @@ var downloadCmd = &cobra.Command{
 
 		// add spinner
 		spinner := ui.NewSpinner("🗃️ Preparing download.. ", ui.Animations["MetaFetcher"])
+		defer spinner.Stop()
 
 		if len(args) < 1 {
 			logger.Log(true, "⚠️ You must specify atleast one download-key")
