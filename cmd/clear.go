@@ -11,10 +11,14 @@ import (
 
 var clearCmd = &cobra.Command{
 	Use:   "clear",
-	Short: "Clear all temporary files, in case something stuck",
+	Short: "Delete temporary downloads, including unplaced files",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		shared.ClearActiveDownloads()
+		if err := shared.CleanupTempDirs(); err != nil {
+			fmt.Println(err)
+			return
+		}
 
 		fmt.Println("✅ Cleared temporary files.")
 	},

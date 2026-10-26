@@ -14,10 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	forceKey string
-	seed     bool
-)
+var seed bool
 
 var downloadCmd = &cobra.Command{
 	Use:   "download <downloadKey> [downloadKey...]",
@@ -75,14 +72,6 @@ var downloadCmd = &cobra.Command{
 				continue
 			}
 
-			// maybe rewrite this part
-			if forceKey != "" {
-				if len(args) > 1 {
-					logger.Log(true, "❌ --forcekey may only be used with a single DownloadKey")
-				}
-				match.ChapterRange = forceKey
-			}
-
 			dKey := ui.StyleFactory(fmt.Sprintf("%4d", match.DownloadKey), ui.Style.Pink)
 			title := ui.StyleFactory(match.TorrentName, ui.Style.LBlue)
 
@@ -107,7 +96,6 @@ var downloadCmd = &cobra.Command{
 }
 
 func init() {
-	downloadCmd.Flags().StringVar(&forceKey, "forcekey", "", "Override chapter range (only for single downloadKey)")
 	downloadCmd.Flags().BoolVar(&seed, "seed", false, "Keep seeding downloaded torrents until you stop the program (Ctrl+C)")
 
 	rootCmd.AddCommand(downloadCmd)

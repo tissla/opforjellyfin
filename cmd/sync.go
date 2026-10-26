@@ -12,16 +12,15 @@ import (
 var syncCmd = &cobra.Command{
 	Use:   "sync",
 	Short: "Update metadata library with new content from GitHub",
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, _ := shared.LoadConfig()
-		if cfg.TargetDir == "" {
-			fmt.Println("⚠️  No target directory set. Use 'setDir' first.")
-			return
-		}
-		err := metadata.SyncMetadata(cfg)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := shared.LoadConfig()
 		if err != nil {
-			fmt.Println("⚠️  Unable to sync metadata. (Is git installed?)")
+			return err
 		}
+		if cfg.TargetDir == "" {
+			return fmt.Errorf("no target directory set; use 'setDir' first")
+		}
+		return metadata.SyncMetadata(cfg)
 	},
 }
 

@@ -6,10 +6,8 @@ import (
 	"opforjellyfin/internal/metadata"
 	"opforjellyfin/internal/shared"
 	"opforjellyfin/internal/ui"
-	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -27,18 +25,16 @@ var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Show current configuration and library status",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, _ := shared.LoadConfig()
+		cfg, err := shared.LoadConfig()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		fmt.Println("🔧 Current Configuration:")
 		fmt.Printf("📂 Target Directory: %s\n", cfg.TargetDir)
 
 		if cfg.TargetDir == "" {
 			fmt.Println("⚠️ No target directory set. Use 'opforjellyfin setDir <path>'")
-			return
-		}
-
-		files, err := os.ReadDir(cfg.TargetDir)
-		if err != nil {
-			fmt.Printf("❌ Could not read target directory: %v\n", err)
 			return
 		}
 
@@ -48,38 +44,14 @@ var infoCmd = &cobra.Command{
 		}
 
 		var seasonFolders []season
-		metaIndex := metadata.LoadMetadataCache()
-
-		for _, f := range files {
-			if !f.IsDir() {
-				continue
-			}
-
-			if f.Name() == "strayvideos" {
-				continue
-			}
-
-			subdir := filepath.Join(cfg.TargetDir, f.Name())
-
-			v, nfo := metadata.CountVideosAndTotal(subdir)
-
-			extNum := shared.ExtractSeasonNumber(f.Name())
-			sNum, _ := strconv.Atoi(extNum)
-
-			sName := ""
-			if metaIndex != nil {
-				if seasonData, exists := metaIndex.Seasons[f.Name()]; exists {
-					sName = seasonData.Name
-				}
-			}
-
-			seasonFolders = append(seasonFolders, season{
-				sNum:      sNum,
-				sName:     sName,
-				videos:    v,
-				totalnfos: nfo,
-			})
-
+		metaIndex, err := metadata.LoadMetadataCache()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for _, arc := range metaIndex.Arcs {
+			v, total := metadata.CountVideosAndTotal(filepath.Join(cfg.TargetDir, arc.Folder))
+			seasonFolders = append(seasonFolders, season{sNum: arc.SeasonNumber, sName: arc.Name, videos: v, totalnfos: total})
 		}
 
 		sort.Slice(seasonFolders, func(i, j int) bool {

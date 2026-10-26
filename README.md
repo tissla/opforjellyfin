@@ -6,7 +6,7 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 > ✨ Torrent downloads  
 > ✨ Placement after Jellyfin standards  
-> ✨ Matched to metadata shamelessly stolen from [SpykerNZ/one-pace-for-plex](https://github.com/SpykerNZ/one-pace-for-plex)
+> ✨ Metadata from [Barry’s One Pace set](https://github.com/tissla/opfor-metadata-barrys)
 
 ---
 
@@ -110,6 +110,16 @@ A terminal that supports unicode-characters is heavily recommended for best expe
    ./opfor setDir "/media/One Piece/One Pace"
    ```
 
+   Episode thumbnails are disabled by default. Posters and backdrops are always downloaded.
+
+   ```bash
+   ./opfor setDir "/media/One Piece/One Pace" --thumbnails
+   ./opfor setDir "/media/One Piece/One Pace" --thumbnails=false
+   ```
+
+   The choice is saved and reused by `sync`. Omitting the flag keeps the saved choice. Disabling thumbnails skips `*-thumb.png` and `*-thumb.jpg` during Git fetching; existing local images are kept.
+
+
 1. Find all available episodes with 'list', or use the -t flag to specify a title, or -r flag to specify a chapter-range.
 
    ```bash
@@ -126,7 +136,7 @@ A terminal that supports unicode-characters is heavily recommended for best expe
 
 ## 📦 Metadata
 
-I hope to continually update [metadata here!](https://github.com/tissla/one-pace-jellyfin)
+Metadata and the generated `metadata-index.json` are downloaded from [opfor-metadata-barrys](https://github.com/tissla/opfor-metadata-barrys). Run `sync` before using the new placement flow. The program reads the index directly; it does not build metadata locally.
 
 The 'sync' command allows the user to stay up to date with new additions to the metadata-repo.
 
@@ -146,7 +156,7 @@ All pull requests are welcome. All criticisms are welcome. I'm here to build and
 
 ## ❤️ Acknowledgements
 
-- SpykerNZ for his metadata
+- Barry for his One Pace metadata set
 - Anacrolix awesome torrent lib
 - Charm team for cool stuff that I should use more
 - One Pace team for their amazing work!
