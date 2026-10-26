@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"opforjellyfin/internal/logger"
@@ -14,7 +16,9 @@ import (
 	"opforjellyfin/internal/shared"
 )
 
-// SelectAllDownloads assigns each missing episode to its most seeded source.
+var resolutionTag = regexp.MustCompile(`(?i)\[(\d{3,4})p\]`)
+
+// SelectAllDownloads selects the most seeded source at 1080p or higher per missing episode.
 func SelectAllDownloads(ctx context.Context, entries []shared.TorrentEntry, cfg *shared.Config, index *shared.MetadataIndex, includeExtended, includeSpecials bool) ([]shared.TorrentEntry, error) {
 	if index == nil || len(index.Entries) == 0 {
 		return nil, fmt.Errorf("metadata index is missing; run 'opfor sync'")
@@ -76,7 +80,7 @@ func SelectAllDownloads(ctx context.Context, entries []shared.TorrentEntry, cfg 
 		entry.SelectedFiles = nil
 		for _, file := range info.UpvertedFiles() {
 			filename := strings.Join(append([]string{info.BestName()}, file.BestPath()...), "/")
-			if !shared.IsVideoFile(filename) {
+			if !shared.IsVideoFile(filename) || videoResolution(filename) < 1080 {
 				continue
 			}
 			stem := strings.TrimSuffix(path.Base(filename), path.Ext(filename))
@@ -102,6 +106,15 @@ func SelectAllDownloads(ctx context.Context, entries []shared.TorrentEntry, cfg 
 		return nil, fmt.Errorf("could not select downloads: %w", fetchError)
 	}
 	return selected, nil
+}
+
+func videoResolution(filename string) int {
+	match := resolutionTag.FindStringSubmatch(path.Base(filename))
+	if len(match) != 2 {
+		return 0
+	}
+	height, _ := strconv.Atoi(match[1])
+	return height
 }
 
 func episodeKey(entry shared.MetadataFile) string {

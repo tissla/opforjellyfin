@@ -148,7 +148,7 @@ A terminal that supports unicode-characters is heavily recommended for best expe
    ./opfor download all --include-extended --include-specials
    ```
 
-   `all` fetches a fresh torrent list and chooses the most seeded source for each missing episode matched by Barry's index. Existing episodes are skipped, including inside arc batches. Extended versions and specials are optional; each flag can be used separately. Only missing, allowed video files are selected from batches. `--seed` cannot be combined with `all` because seeding would block the queue.
+   `all` fetches a fresh torrent list and chooses the most seeded source at **1080p or higher** for each missing episode matched by Barry's index. Resolution is checked per video filename, including inside batches; lower or unknown resolutions are skipped without fallback. Existing episodes are skipped, including inside arc batches. Extended versions and specials are optional; each flag can be used separately. Only missing, allowed video files are selected from batches. `--seed` cannot be combined with `all` because seeding would block the queue.
 
 ## 📦 Metadata
 
