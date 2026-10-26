@@ -31,10 +31,14 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 	// Handle Ctrl+C
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 	go func() {
-		<-sigChan
-		logger.Log(true, "\n❌ Received interrupt signal, cancelling downloads...")
-		cancel()
+		select {
+		case <-sigChan:
+			logger.Log(true, "\n❌ Received interrupt signal, cancelling downloads...")
+			cancel()
+		case <-ctx.Done():
+		}
 	}()
 
 	// Load metadata index once
@@ -57,7 +61,6 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 			ChapterRange: entry.ChapterRange,
 		}
 
-		shared.SaveTorrentDownload(td)
 		allTDs = append(allTDs, td)
 	}
 
@@ -87,10 +90,11 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 					return // Exit if cancelled
 				default:
 					td := allTDs[i]
+					shared.SaveTorrentDownload(td)
 
 					// Download (and, if seed is set, keep uploading afterward
 					// until ctx is cancelled - StartTorrent blocks for that).
-					err := StartTorrent(ctx, td, seed)
+					err := StartTorrent(ctx, td, seed, entries[i].SelectedFiles)
 
 					// A cancel that arrives *after* the download already
 					// finished just means the user stopped a --seed session -
@@ -109,6 +113,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 							td.PlacementProgress = "❌ Failed"
 						}
 						shared.SaveTorrentDownload(td)
+						shared.RemoveActiveDownload(td.TorrentID)
 						placementResults <- td
 						continue
 					}
@@ -116,6 +121,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 					tmpBase, err := shared.GetTempDir()
 					if err != nil {
 						logger.Log(true, "failed to find temp dir: %v", err)
+						shared.RemoveActiveDownload(td.TorrentID)
 						placementResults <- td
 						continue
 					}
@@ -127,6 +133,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 						logger.Log(false, "Failed to remove temp dir %s: %v", tmpDir, err)
 					}
 
+					shared.RemoveActiveDownload(td.TorrentID)
 					placementResults <- td
 				}
 			}

@@ -26,6 +26,12 @@ func SaveTorrentDownload(td *TorrentDownload) {
 	activeDownloads[td.TorrentID] = snapshot
 }
 
+func RemoveActiveDownload(id int) {
+	mu.Lock()
+	defer mu.Unlock()
+	delete(activeDownloads, id)
+}
+
 func GetActiveDownloads() []*TorrentDownload {
 	mu.RLock()
 	defer mu.RUnlock()

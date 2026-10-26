@@ -38,7 +38,10 @@ type MetadataIndex struct {
 }
 
 type MetadataFile struct {
-	NFOPath string `json:"nfo_path"`
+	NFOPath   string `json:"nfo_path"`
+	EpisodeID string `json:"episode_id"`
+	Kind      string `json:"kind"`
+	Variant   string `json:"variant"`
 }
 
 type MetadataArc struct {
@@ -77,4 +80,6 @@ type TorrentEntry struct {
 	IsSpecial     bool   // is a special (no chapter range)
 	HaveIt        int    // 0 = none, 1 = some, 2 = all
 	Date          string //
+
+	SelectedFiles []string `json:"-"` // nil downloads the whole torrent
 }

@@ -121,7 +121,7 @@ A terminal that supports unicode-characters is heavily recommended for best expe
 
    ```bash
    ./opfor setDir "/media/One Piece/One Pace" --thumbnails
-   ./opfor setDir "/media/One Piece/One Pace" --thumbnails=false
+   ./opfor setDir "/media/One Piece/One Pace" --thumbnails=false 
    ```
 
    The choice is saved and reused by `sync`. Omitting the flag keeps the saved choice. Disabling thumbnails skips `*-thumb.png` and `*-thumb.jpg` during Git fetching; existing local images are kept.
@@ -140,6 +140,15 @@ A terminal that supports unicode-characters is heavily recommended for best expe
    ```bash
    ./opfor download 15 16 17
    ```
+
+1. Download all missing episodes automatically, with up to five torrents running at once.
+
+   ```bash
+   ./opfor download all
+   ./opfor download all --include-extended --include-specials
+   ```
+
+   `all` fetches a fresh torrent list and chooses the most seeded source for each missing episode matched by Barry's index. Existing episodes are skipped, including inside arc batches. Extended versions and specials are optional; each flag can be used separately. Only missing, allowed video files are selected from batches. `--seed` cannot be combined with `all` because seeding would block the queue.
 
 ## 📦 Metadata
 

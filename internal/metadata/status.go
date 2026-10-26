@@ -27,7 +27,8 @@ func HaveVideoStatus(title string) int {
 			return 0
 		}
 		dir := filepath.Join(cfg.TargetDir, filepath.FromSlash(path.Dir(entry.NFOPath)))
-		if videoEntries(dir, index)[id] {
+		found, _ := ExistingVideos(dir, index)
+		if found[id] {
 			return 2
 		}
 		return 0
@@ -77,12 +78,17 @@ func CountVideosAndTotal(dir string) (matched int, total int) {
 			total++
 		}
 	}
-	return len(videoEntries(dir, index)), total
+	found, _ := ExistingVideos(dir, index)
+	return len(found), total
 }
 
-func videoEntries(dir string, index *shared.MetadataIndex) map[string]bool {
+// ExistingVideos returns the indexed entries present in an arc folder.
+func ExistingVideos(dir string, index *shared.MetadataIndex) (map[string]bool, error) {
 	found := make(map[string]bool)
-	files, _ := os.ReadDir(dir)
+	files, err := os.ReadDir(dir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
 	for _, file := range files {
 		if !file.Type().IsRegular() || !shared.IsVideoFile(file.Name()) {
 			continue
@@ -93,5 +99,5 @@ func videoEntries(dir string, index *shared.MetadataIndex) map[string]bool {
 			found[id] = true
 		}
 	}
-	return found
+	return found, nil
 }

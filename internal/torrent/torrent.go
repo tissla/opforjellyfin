@@ -8,6 +8,7 @@ import (
 	"opforjellyfin/internal/logger"
 	"opforjellyfin/internal/shared"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/anacrolix/torrent"
@@ -17,27 +18,12 @@ import (
 // main torrent download and tracker. When seed is true, the client keeps
 // uploading after the download finishes until ctx is cancelled (Ctrl+C) -
 // the caller is responsible for not treating that as a failure.
-func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool) error {
+func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool, selectedFiles []string) error {
 	config, err := shared.LoadConfig()
 	if err != nil {
 		return err
 	}
-	srcBaseURL := config.Source.BaseURL
-	// get torrent meta-info
-	torrentURL := fmt.Sprintf("%s/download/%d.torrent", srcBaseURL, td.TorrentID)
-	logger.Log(false, "Fetching torrent: %s, ID: %s", torrentURL, td.Title)
-
-	// get metadata
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, torrentURL, nil)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		logger.Log(false, "HTTP request for metadata failed %s", td.Title)
-		return err
-	}
-	defer resp.Body.Close()
-
-	//build meta
-	meta, err := metainfo.Load(resp.Body)
+	meta, err := fetchTorrentMeta(ctx, config.Source.BaseURL, td.TorrentID)
 	if err != nil {
 		return err
 	}
@@ -70,7 +56,6 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool) er
 	// get torrent metadata
 	select {
 	case <-t.GotInfo():
-		td.TotalSize = t.Length()
 		logger.Log(false, "Torrent metadata loaded: %s", td.Title)
 	case <-time.After(20 * time.Second):
 		return fmt.Errorf("timeout waiting for torrent metadata")
@@ -78,17 +63,20 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool) er
 		return ctx.Err()
 	}
 
-	// Use the torrent's file list for single episodes and batches.
+	files, err := filesToDownload(t, selectedFiles)
+	if err != nil {
+		return err
+	}
 	td.VideoPaths = nil
-	for _, file := range t.Files() {
+	td.TotalSize = 0
+	for _, file := range files {
+		td.TotalSize += file.Length()
 		if shared.IsVideoFile(file.Path()) {
 			td.VideoPaths = append(td.VideoPaths, filepath.Join(tmpDir, filepath.FromSlash(file.Path())))
 		}
+		file.Download()
 	}
 
-	// start download
-	td.TotalSize = t.Length()
-	t.DownloadAll()
 	shared.SaveTorrentDownload(td)
 
 	// watch progress, save to activefile. Bounded independently of the
@@ -100,13 +88,17 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool) er
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	for t.BytesMissing() > 0 {
+	for {
+		progress, complete := fileProgress(files)
+		td.Progress = progress
+		shared.SaveTorrentDownload(td)
+		if complete {
+			break
+		}
 		select {
 		case <-downloadCtx.Done():
 			return downloadCtx.Err()
 		case <-ticker.C:
-			td.Progress = t.BytesCompleted()
-			shared.SaveTorrentDownload(td)
 		}
 	}
 
@@ -128,6 +120,59 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool) er
 	}
 
 	return nil
+}
+
+func fetchTorrentMeta(ctx context.Context, baseURL string, id int) (*metainfo.MetaInfo, error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	url := fmt.Sprintf("%s/download/%d.torrent", strings.TrimRight(baseURL, "/"), id)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch torrent %d: HTTP %d", id, resp.StatusCode)
+	}
+	return metainfo.Load(resp.Body)
+}
+
+func filesToDownload(t *torrent.Torrent, selected []string) ([]*torrent.File, error) {
+	if selected == nil {
+		return t.Files(), nil
+	}
+	wanted := make(map[string]bool, len(selected))
+	for _, filename := range selected {
+		wanted[filename] = true
+	}
+	var files []*torrent.File
+	for _, file := range t.Files() {
+		if wanted[file.Path()] {
+			files = append(files, file)
+			delete(wanted, file.Path())
+		}
+	}
+	if len(wanted) > 0 || len(files) == 0 {
+		return nil, fmt.Errorf("selected files are missing from torrent")
+	}
+	return files, nil
+}
+
+func fileProgress(files []*torrent.File) (bytes int64, complete bool) {
+	complete = true
+	for _, file := range files {
+		bytes += file.BytesCompleted()
+		for _, piece := range file.State() {
+			if !piece.Complete {
+				complete = false
+			}
+		}
+	}
+	return
 }
 
 // loghelper
