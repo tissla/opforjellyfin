@@ -82,27 +82,8 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool, se
 
 	shared.SaveTorrentDownload(td)
 
-	// watch progress, save to activefile. Bounded independently of the
-	// caller's ctx so a stalled download times out even during a --seed run,
-	// without also capping how long seeding is allowed to continue below.
-	downloadCtx, downloadCancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer downloadCancel()
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		progress, complete := fileProgress(files)
-		td.Progress = progress
-		shared.SaveTorrentDownload(td)
-		if complete {
-			break
-		}
-		select {
-		case <-downloadCtx.Done():
-			return downloadCtx.Err()
-		case <-ticker.C:
-		}
+	if err := waitForDownload(ctx, td, files, 30*time.Minute); err != nil {
+		return err
 	}
 
 	// close
@@ -123,6 +104,31 @@ func StartTorrent(ctx context.Context, td *shared.TorrentDownload, seed bool, se
 	}
 
 	return nil
+}
+
+func waitForDownload(ctx context.Context, td *shared.TorrentDownload, files []*torrent.File, idleTimeout time.Duration) error {
+	idle := time.NewTimer(idleTimeout)
+	defer idle.Stop()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		progress, complete := fileProgress(files)
+		if progress > td.Progress {
+			idle.Reset(idleTimeout)
+		}
+		td.Progress = progress
+		shared.SaveTorrentDownload(td)
+		if complete {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-idle.C:
+			return context.DeadlineExceeded
+		case <-ticker.C:
+		}
+	}
 }
 
 func fetchTorrentMeta(ctx context.Context, baseURL string, id int) (*metainfo.MetaInfo, error) {

@@ -122,7 +122,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed, a
 
 					if err != nil && !seedingStoppedAfterSuccess {
 						if err == context.DeadlineExceeded {
-							logger.Log(true, "Download timed out after 30 minutes: %s", td.Title)
+							logger.Log(true, "Download timed out after 30 minutes without progress: %s", td.Title)
 							td.PlacementProgress = "Timed out"
 						} else if err == context.Canceled {
 							td.PlacementProgress = "Cancelled"

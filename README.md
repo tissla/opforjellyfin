@@ -152,6 +152,8 @@ A terminal that supports unicode-characters is heavily recommended for best expe
 
    A total progress bar shows completed and remaining episodes for the selected downloads. An episode counts as complete after successful placement; failed downloads or placements remain in the remaining count. Elapsed time is shown during downloading, followed by a short file count and duration summary. Placement errors are still printed; successful placements are recorded with `--debug` instead of listed at the end.
 
+   Downloads time out after 30 minutes without progress. Larger batches can keep downloading for longer as long as they make progress. `info` counts all indexed versions and resolutions, so its totals can exceed what `download all` selects.
+
 ## 📦 Metadata
 
 Metadata and the generated `metadata-index.json` are downloaded from [opfor-metadata-barrys](https://github.com/tissla/opfor-metadata-barrys). Run `sync` before using the new placement flow. The program reads the index directly; it does not build metadata locally.

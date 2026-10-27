@@ -1,10 +1,14 @@
 package torrent
 
 import (
+	"context"
 	"crypto/sha1"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"opforjellyfin/internal/shared"
 
 	anacrolix "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
@@ -74,4 +78,49 @@ func TestSelectedFilesCompleteWithoutRestOfBatch(t *testing.T) {
 	if _, complete := fileProgress(selected); complete {
 		t.Fatal("corrupted file must not count as complete")
 	}
+
+	t.Cleanup(shared.ClearActiveDownloads)
+	td := &shared.TorrentDownload{TorrentID: 1}
+	t.Run("stalled download times out", func(t *testing.T) {
+		if err := waitForDownload(context.Background(), td, all, 40*time.Millisecond); err != context.DeadlineExceeded {
+			t.Fatalf("stalled download: %v", err)
+		}
+	})
+	t.Run("cancelled download stops", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		if err := waitForDownload(ctx, td, all, time.Minute); err != context.Canceled {
+			t.Fatalf("cancelled download: %v", err)
+		}
+	})
+	t.Run("progress extends timeout", func(t *testing.T) {
+		written := make(chan error, 1)
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			if err := os.WriteFile(selectedPath, []byte("abcd"), 0644); err != nil {
+				written <- err
+				return
+			}
+			tr.VerifyData()
+			time.Sleep(1300 * time.Millisecond)
+			if err := os.WriteFile(filepath.Join(cfg.DataDir, "Batch", "B.MP4"), []byte("efgh"), 0644); err != nil {
+				written <- err
+				return
+			}
+			tr.VerifyData()
+			written <- nil
+		}()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := waitForDownload(ctx, td, all, 1500*time.Millisecond)
+		if writeErr := <-written; writeErr != nil {
+			t.Fatal(writeErr)
+		}
+		if err != nil {
+			t.Fatalf("download made progress but stopped: %v", err)
+		}
+		if td.Progress != 8 {
+			t.Fatalf("finished with %d bytes, want 8", td.Progress)
+		}
+	})
 }
