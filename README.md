@@ -12,15 +12,13 @@ CLI-tool to automate download and organisation of [One Pace](https://onepace.net
 
 # 📢 NEWS 
 
-## Opfor 1.1.0 release!
-I've taken the time to finally update!
-Notable new features/bugfixes:
-1. Seeder-mode
-2. Quality filters
-3. Search-result caching
-4. Further concurrency issue fixes 
-5. A bug where 'sync' would spam missing metadata shamelessly
-6. Download progress bars would sometimes swap places mid-download, making the CLI look glitchy
+## Opfor 1.2.0 release!
+
+New update finally!
+1. New metadata source repo (Barrys metadata)
+2. The 'sort'-command is here! 
+3. The 'download all' command is here for testing.
+4. Download progress bars being glitchy are fixed, and graphics updated.
 
 And more!
 Don't hesitate to post issues as you find them.
