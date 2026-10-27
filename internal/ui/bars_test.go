@@ -85,3 +85,25 @@ func TestDownloadLayoutFitsTerminal(t *testing.T) {
 		t.Fatalf("unverified download displayed as complete: %q", line)
 	}
 }
+
+func TestTotalBarAlignsWithColoredTitles(t *testing.T) {
+	td := &shared.TorrentDownload{
+		Title:    "\033[38;5;201m312\033[0m: \033[94mWano 58\033[0m (1080p)",
+		Progress: 52, TotalSize: 100,
+	}
+	barColumn := func(line string) int {
+		plain := ansi.Strip(line)
+		start := strings.IndexAny(plain, "━·")
+		if start < 0 {
+			t.Fatalf("missing bar: %q", line)
+		}
+		return ansi.StringWidth(plain[:start])
+	}
+	for _, width := range []int{60, 80, 100} {
+		downloadColumn := barColumn(renderDownload(td, width))
+		totalColumn := barColumn(renderTotalBar(4, 186, width))
+		if downloadColumn != totalColumn {
+			t.Fatalf("width %d: colored download starts at column %d, total at %d", width, downloadColumn, totalColumn)
+		}
+	}
+}
