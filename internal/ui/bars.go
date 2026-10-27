@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-func FollowProgress(doneChan chan struct{}) {
+func FollowProgress(doneChan chan struct{}, started time.Time) {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	defer ticker.Stop()
 	logger.BufferUserOutput(true)
@@ -43,6 +43,9 @@ func FollowProgress(doneChan chan struct{}) {
 		}
 		if latest != "" {
 			status = "Latest: " + latest
+		}
+		if !started.IsZero() {
+			status = fmt.Sprintf("Elapsed: %s | %s", time.Since(started).Truncate(time.Second), status)
 		}
 		frame += fmt.Sprintf("\r%s\033[K\n", ansi.Truncate(status, width, "…"))
 		if frame == previous {

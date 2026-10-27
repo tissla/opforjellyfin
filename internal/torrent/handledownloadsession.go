@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -22,8 +23,11 @@ import (
 // MaxConcurrent of the requested entries will ever start seeding in one run.
 const MaxConcurrent = 5
 
-func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bool) {
-
+func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed, all bool) {
+	var started time.Time
+	if all {
+		started = time.Now()
+	}
 	// Create a context that can be cancelled with Ctrl+C
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -80,7 +84,7 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 	// Start UI progress monitoring
 	doneChan := make(chan struct{})
 	logger.BufferUserOutput(true)
-	go ui.FollowProgress(doneChan)
+	go ui.FollowProgress(doneChan, started)
 
 	// Create work queue
 	workQueue := make(chan int, len(entries))
@@ -176,8 +180,18 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 		// Don't wait forever for UI
 	}
 
-	// Print placement results
+	printDownloadResults(placedTorrents, all, ctx.Err() != nil, time.Since(started))
+	shared.ClearActiveDownloads()
+}
+
+func printDownloadResults(placedTorrents []*shared.TorrentDownload, all, cancelled bool, elapsed time.Duration) {
 	for _, td := range placedTorrents {
+		if all {
+			for _, line := range td.PlacementFull {
+				logger.Log(!strings.HasPrefix(line, "Placed: "), "%s", line)
+			}
+			continue
+		}
 		if len(td.PlacementFull) > 0 {
 			fmt.Printf("🎞️  %s\n", ui.AnsiPadRight(td.Title, 36, ".."))
 			for _, line := range td.PlacementFull {
@@ -186,15 +200,26 @@ func HandleDownloadSession(entries []shared.TorrentEntry, outDir string, seed bo
 		}
 	}
 
+	if all {
+		placed, total := shared.GetDownloadProgress()
+		status := "Finished"
+		if cancelled {
+			status = "Cancelled"
+		}
+		logger.Log(true, "%s %d/%d files in %s; %d remaining.", status, placed, total, elapsed.Truncate(time.Second), max(0, total-placed))
+		if placed < total {
+			logger.Log(true, "Run 'download all' again to retry; partial files are kept in .opfor-tmp.")
+		}
+		return
+	}
+
 	allPlaced := true
 	for _, td := range placedTorrents {
 		if !td.Placed {
 			allPlaced = false
 		}
 	}
-	shared.ClearActiveDownloads()
-
-	if ctx.Err() != nil {
+	if cancelled {
 		logger.Log(true, "\n❌ Downloads cancelled.")
 	} else if !allPlaced {
 		logger.Log(true, "\nSome downloads could not be placed. Remaining files were kept in .opfor-tmp.")

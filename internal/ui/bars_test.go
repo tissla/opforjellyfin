@@ -25,7 +25,7 @@ func TestTotalBarSurvivesActiveDownloadRemoval(t *testing.T) {
 	os.Stdout = out
 	defer func() { os.Stdout = previous; out.Close() }()
 	done := make(chan struct{})
-	go FollowProgress(done)
+	go FollowProgress(done, time.Now().Add(-65*time.Second))
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		data, _ := os.ReadFile(out.Name())
@@ -54,6 +54,9 @@ func TestTotalBarSurvivesActiveDownloadRemoval(t *testing.T) {
 	}
 	if !strings.Contains(output, "Latest: Download timed out") {
 		t.Fatalf("missing status row: %q", output)
+	}
+	if !strings.Contains(output, "Elapsed: 1m5s") {
+		t.Fatalf("missing elapsed time: %q", output)
 	}
 	if !strings.Contains(output, "\033[?25l") || !strings.Contains(output, "\033[?25h") {
 		t.Fatal("cursor was not hidden and restored")

@@ -109,7 +109,7 @@ var downloadCmd = &cobra.Command{
 		if seed && len(matches) > torrent.MaxConcurrent {
 			logger.Log(true, "⚠️ --seed with more than %d keys: only the first %d will start this run. Seeding workers stay occupied until Ctrl+C.", torrent.MaxConcurrent, torrent.MaxConcurrent)
 		}
-		torrent.HandleDownloadSession(matches, cfg.TargetDir, seed)
+		torrent.HandleDownloadSession(matches, cfg.TargetDir, seed, args[0] == "all")
 		return nil
 	},
 }
