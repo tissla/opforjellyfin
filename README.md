@@ -174,7 +174,7 @@ All pull requests are welcome. All criticisms are welcome. I'm here to build and
 
 ## ❤️ Acknowledgements
 
-- Barry for his One Pace metadata set
+- Barry for their One Pace metadata set
 - Anacrolix awesome torrent lib
 - Charm team for cool stuff that I should use more
 - One Pace team for their amazing work!
