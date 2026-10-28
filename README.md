@@ -170,7 +170,7 @@ The 'sync' command allows the user to stay up to date with new additions to the 
 
 ## 🤝 Contributions
 
-All pull requests are welcome. All criticisms are welcome. I'm here to build and to learn and to get better.
+All is welcome!
 
 ## ❤️ Acknowledgements
 
