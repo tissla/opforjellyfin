@@ -72,7 +72,7 @@ You can choose to either use one of the released versions or build from source y
 
 For this program to work, you need to have 'git' installed.
 
-### [Releases](https://github.com/tissla/opforjellyfin/releases/tag/v1.1.0)
+### [Releases](https://github.com/tissla/opforjellyfin/releases/tag/v1.2.0)
 
 MacOS / Linux:
 
