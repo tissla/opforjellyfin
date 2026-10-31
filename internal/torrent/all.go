@@ -18,7 +18,7 @@ import (
 
 var resolutionTag = regexp.MustCompile(`(?i)\[(\d{3,4})p\]`)
 
-// SelectAllDownloads selects the most seeded source at 1080p or higher per missing episode.
+// SelectAllDownloads prefers 1080p or higher, falling back to 720p per missing episode.
 func SelectAllDownloads(ctx context.Context, entries []shared.TorrentEntry, cfg *shared.Config, index *shared.MetadataIndex, includeExtended, includeSpecials bool) ([]shared.TorrentEntry, error) {
 	if index == nil || len(index.Entries) == 0 {
 		return nil, fmt.Errorf("metadata index is missing; run 'opfor sync'")
@@ -51,13 +51,14 @@ func SelectAllDownloads(ctx context.Context, entries []shared.TorrentEntry, cfg 
 		return entries[i].TorrentID < entries[j].TorrentID
 	})
 	seen := make(map[int]bool)
-	var selected []shared.TorrentEntry
+	highQuality := make(map[string]bool)
+	var candidates []shared.TorrentEntry
 	var fetchError error
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		if len(wanted) == 0 {
+		if len(highQuality) == len(wanted) {
 			break
 		}
 		if entry.Seeders <= 0 || entry.TorrentID <= 0 || seen[entry.TorrentID] {
@@ -80,7 +81,8 @@ func SelectAllDownloads(ctx context.Context, entries []shared.TorrentEntry, cfg 
 		entry.SelectedFiles = nil
 		for _, file := range info.UpvertedFiles() {
 			filename := strings.Join(append([]string{info.BestName()}, file.BestPath()...), "/")
-			if !shared.IsVideoFile(filename) || videoResolution(filename) < 1080 {
+			resolution := videoResolution(filename)
+			if !shared.IsVideoFile(filename) || (resolution != 720 && resolution < 1080) {
 				continue
 			}
 			stem := strings.TrimSuffix(path.Base(filename), path.Ext(filename))
@@ -93,6 +95,26 @@ func SelectAllDownloads(ctx context.Context, entries []shared.TorrentEntry, cfg 
 			}
 			key := episodeKey(index.Entries[id])
 			if !wanted[key] {
+				continue
+			}
+			entry.SelectedFiles = append(entry.SelectedFiles, filename)
+			if resolution >= 1080 {
+				highQuality[key] = true
+			}
+		}
+		if len(entry.SelectedFiles) > 0 {
+			candidates = append(candidates, entry)
+		}
+	}
+
+	var selected []shared.TorrentEntry
+	for _, entry := range candidates {
+		files := entry.SelectedFiles
+		entry.SelectedFiles = nil
+		for _, filename := range files {
+			stem := strings.TrimSuffix(path.Base(filename), path.Ext(filename))
+			key := episodeKey(index.Entries[index.ByFilename[stem]])
+			if !wanted[key] || (highQuality[key] && videoResolution(filename) < 1080) {
 				continue
 			}
 			entry.SelectedFiles = append(entry.SelectedFiles, filename)

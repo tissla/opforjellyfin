@@ -26,14 +26,14 @@ func TestSelectAllDownloads(t *testing.T) {
 	var index shared.MetadataIndex
 	err := json.Unmarshal([]byte(`{
 		"arcs":{"arc":{"folder":"Arc"},"specials":{"folder":"Specials"}},
-		"by_filename":{"A [1080p]":"a","A fixed [1080p]":"a","A old [1080p]":"old","B [1080p]":"b","B Extended [1080p]":"ext","C [1080p]":"c","Special 199-201 [1080p]":"sp"},
+		"by_filename":{"A [1080p]":"a","A fixed [1080p]":"a","A old [1080p]":"old","B [1080p]":"b","B Extended [720p]":"ext","C [1080p]":"c","Special 199-201 [720p]":"sp"},
 		"entries":{
 			"a":{"nfo_path":"Arc/A [1080p].nfo","episode_id":"ep1","kind":"episode","variant":"standard"},
 			"old":{"nfo_path":"Arc/A old [1080p].nfo","episode_id":"ep1","kind":"episode","variant":"alternate"},
 			"b":{"nfo_path":"Arc/B [1080p].nfo","episode_id":"ep2","kind":"episode","variant":"standard"},
-			"ext":{"nfo_path":"Arc/B Extended [1080p].nfo","episode_id":"ep2","kind":"episode","variant":"extended"},
+			"ext":{"nfo_path":"Arc/B Extended [720p].nfo","episode_id":"ep2","kind":"episode","variant":"extended"},
 			"c":{"nfo_path":"Arc/C [1080p].nfo","episode_id":"ep3","kind":"episode","variant":"standard"},
-			"sp":{"nfo_path":"Specials/Special 199-201 [1080p].nfo","episode_id":"special1","kind":"special","variant":"standard"}
+			"sp":{"nfo_path":"Specials/Special 199-201 [720p].nfo","episode_id":"special1","kind":"special","variant":"standard"}
 		}
 	}`), &index)
 	if err != nil {
@@ -42,8 +42,8 @@ func TestSelectAllDownloads(t *testing.T) {
 	installManifests(t, map[int]metainfo.Info{
 		1: {Name: "Batch", Files: []metainfo.FileInfo{
 			{Path: []string{"A [1080p].mkv"}, Length: 10}, {Path: []string{"B [1080p].mkv"}, Length: 10},
-			{Path: []string{"B Extended [1080p].mkv"}, Length: 10}, {Path: []string{"C [1080p].mkv"}, Length: 10},
-			{Path: []string{"Special 199-201 [1080p].mkv"}, Length: 10}, {Path: []string{"Unknown.mkv"}, Length: 10},
+			{Path: []string{"B Extended [720p].mkv"}, Length: 10}, {Path: []string{"C [1080p].mkv"}, Length: 10},
+			{Path: []string{"Special 199-201 [720p].mkv"}, Length: 10}, {Path: []string{"Unknown.mkv"}, Length: 10},
 			{Path: []string{"readme.txt"}, Length: 10},
 		}},
 		2: {Name: "B [1080p].mkv", Length: 10},
@@ -60,9 +60,9 @@ func TestSelectAllDownloads(t *testing.T) {
 		want               map[int][]string
 	}{
 		{"default", false, false, "A fixed [1080p]", map[int][]string{2: {"B [1080p].mkv"}, 1: {"Batch/C [1080p].mkv"}}},
-		{"extended", true, false, "A old [1080p]", map[int][]string{2: {"B [1080p].mkv"}, 1: {"Batch/B Extended [1080p].mkv", "Batch/C [1080p].mkv"}}},
-		{"specials", false, true, "A [1080p]", map[int][]string{2: {"B [1080p].mkv"}, 1: {"Batch/C [1080p].mkv", "Batch/Special 199-201 [1080p].mkv"}}},
-		{"both", true, true, "A [1080p]", map[int][]string{2: {"B [1080p].mkv"}, 1: {"Batch/B Extended [1080p].mkv", "Batch/C [1080p].mkv", "Batch/Special 199-201 [1080p].mkv"}}},
+		{"extended", true, false, "A old [1080p]", map[int][]string{2: {"B [1080p].mkv"}, 1: {"Batch/B Extended [720p].mkv", "Batch/C [1080p].mkv"}}},
+		{"specials", false, true, "A [1080p]", map[int][]string{2: {"B [1080p].mkv"}, 1: {"Batch/C [1080p].mkv", "Batch/Special 199-201 [720p].mkv"}}},
+		{"both", true, true, "A [1080p]", map[int][]string{2: {"B [1080p].mkv"}, 1: {"Batch/B Extended [720p].mkv", "Batch/C [1080p].mkv", "Batch/Special 199-201 [720p].mkv"}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &shared.Config{TargetDir: t.TempDir(), Source: shared.ScraperConfig{BaseURL: "https://tracker.test"}}
@@ -106,7 +106,7 @@ func TestSelectAllDownloadsAlreadyOwned(t *testing.T) {
 	}
 }
 
-func TestSelectAllDownloadsMinimumResolution(t *testing.T) {
+func TestSelectAllDownloadsPrefersHDWith720pFallback(t *testing.T) {
 	index := &shared.MetadataIndex{
 		Arcs:       map[string]shared.MetadataArc{"arc": {Folder: "Arc"}},
 		ByFilename: make(map[string]string),
@@ -115,7 +115,7 @@ func TestSelectAllDownloadsMinimumResolution(t *testing.T) {
 	for stem, episode := range map[string]string{
 		"A [720p]": "a", "A [1080p]": "a", "A [2160p]": "a",
 		"B [2160P]": "b", "B [1080p]": "b", "C [720p]": "c",
-		"D": "d", "E [1440p]": "e",
+		"C [1080p]": "c", "D": "d", "E [1440p]": "e", "F [480p]": "f",
 	} {
 		index.ByFilename[stem] = stem
 		index.Entries[stem] = shared.MetadataFile{NFOPath: "Arc/" + stem + ".nfo", EpisodeID: episode, Kind: "episode", Variant: "standard"}
@@ -127,16 +127,20 @@ func TestSelectAllDownloadsMinimumResolution(t *testing.T) {
 			{Path: []string{"C [720p].mkv"}, Length: 10},
 			{Path: []string{"D.mkv"}, Length: 10},
 			{Path: []string{"E [1440p].mp4"}, Length: 10},
+			{Path: []string{"F [480p].mkv"}, Length: 10},
 		}},
 		2: {Name: "A [1080p].mkv", Length: 10},
 		3: {Name: "A [2160p].mkv", Length: 10},
 		4: {Name: "B [1080p].mkv", Length: 10},
+		5: {Name: "C [720p].mkv", Length: 10},
 	})
 	entries := []shared.TorrentEntry{
 		{TorrentID: 1, Seeders: 100, Quality: "1080p"},
 		{TorrentID: 2, Seeders: 30, Quality: "1080p"},
 		{TorrentID: 3, Seeders: 20, Quality: "n/a"},
 		{TorrentID: 4, Seeders: 10, Quality: "1080p"},
+		{TorrentID: 5, Seeders: 50, Quality: "720p"},
+		{TorrentID: 6, Seeders: 0, Quality: "1080p"},
 	}
 	cfg := &shared.Config{TargetDir: t.TempDir(), Source: shared.ScraperConfig{BaseURL: "https://tracker.test"}}
 	selected, err := SelectAllDownloads(context.Background(), entries, cfg, index, false, false)
@@ -145,10 +149,13 @@ func TestSelectAllDownloadsMinimumResolution(t *testing.T) {
 	}
 	got := make(map[int][]string)
 	for _, entry := range selected {
+		if _, exists := got[entry.TorrentID]; exists {
+			t.Fatalf("torrent %d selected more than once", entry.TorrentID)
+		}
 		got[entry.TorrentID] = entry.SelectedFiles
 	}
 	want := map[int][]string{
-		1: {"Batch [1080p]/B [2160P].mkv", "Batch [1080p]/E [1440p].mp4"},
+		1: {"Batch [1080p]/B [2160P].mkv", "Batch [1080p]/C [720p].mkv", "Batch [1080p]/E [1440p].mp4"},
 		2: {"A [1080p].mkv"},
 	}
 	if !reflect.DeepEqual(got, want) {

@@ -75,7 +75,7 @@ var downloadCmd = &cobra.Command{
 			for _, match := range matches {
 				files += len(match.SelectedFiles)
 			}
-			logger.Log(true, "Selected %d missing files at 1080p or higher from %d torrents (up to %d downloads at once).", files, len(matches), torrent.MaxConcurrent)
+			logger.Log(true, "Selected %d missing files from %d torrents (1080p+ preferred, 720p fallback; up to %d downloads at once).", files, len(matches), torrent.MaxConcurrent)
 		} else {
 			searchCache, err := scraper.LoadSearchCache()
 			if err != nil {
