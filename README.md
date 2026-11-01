@@ -28,12 +28,9 @@ Don't hesitate to post issues as you find them.
 ```bash
 ./opfor sort "/path/to/downloads"
 ./opfor sort "/path/to/episode.mkv"
-./opfor sort "/path/to/downloads" --hardlink
 ```
 
 Moves matched videos into their arc folders in the configured library, preserving filenames. Directories are searched recursively. Unmatched files and destination conflicts remain at their source paths. Known filename aliases receive matching NFO and thumbnail copies.
-
-Use `--hardlink` to keep source files available for seeding and create hardlinks in the library without duplicating video data. Both paths must be on the same mounted filesystem/volume with hardlink support. If linking fails, the source is kept and an error is reported; there is no fallback to copying or moving.
 
 Failed torrent placements remain under the library's `.opfor-tmp` directory and can be retried with `sort`. `clear` deletes temporary downloads, including those unplaced files.
 
