@@ -48,7 +48,7 @@ func ProcessTorrentFiles(outDir string, td *shared.TorrentDownload, index *share
 	failed := 0
 	for i, videoPath := range td.VideoPaths {
 		td.PlacementProgress = fmt.Sprintf("Placing %d/%d", i+1, len(td.VideoPaths))
-		message, err := MatchAndPlaceVideo(videoPath, outDir, index)
+		message, err := MatchAndPlaceVideo(videoPath, outDir, index, false)
 		if err != nil {
 			failed++
 			message = fmt.Sprintf("Left in %s: %v", videoPath, err)

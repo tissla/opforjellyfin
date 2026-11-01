@@ -10,9 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var sortHardlink bool
+
 var sortCmd = &cobra.Command{
 	Use:   "sort <path>",
-	Short: "Move One Pace videos into their arc folders, keeping their filenames",
+	Short: "Move or hardlink One Pace videos into their arc folders, keeping their filenames",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := shared.LoadConfig()
@@ -36,7 +38,7 @@ var sortCmd = &cobra.Command{
 		}
 		placed, alreadyPlaced, failed := 0, 0, 0
 		for _, file := range files {
-			message, err := matcher.MatchAndPlaceVideo(file, cfg.TargetDir, index)
+			message, err := matcher.MatchAndPlaceVideo(file, cfg.TargetDir, index, sortHardlink)
 			if err != nil {
 				failed++
 				cmd.Printf("Left unchanged: %s (%v)\n", file, err)
@@ -56,5 +58,6 @@ var sortCmd = &cobra.Command{
 }
 
 func init() {
+	sortCmd.Flags().BoolVar(&sortHardlink, "hardlink", false, "Create hardlinks and keep source files for seeding (requires the same filesystem)")
 	rootCmd.AddCommand(sortCmd)
 }

@@ -35,9 +35,9 @@ func MatchFile(filename string, index *shared.MetadataIndex) (string, error) {
 	return nfoPath, nil
 }
 
-// MatchAndPlaceVideo moves a video into its arc folder without renaming it.
+// MatchAndPlaceVideo moves or hardlinks a video into its arc folder without renaming it.
 // An empty message means the file was already in place.
-func MatchAndPlaceVideo(videoPath, targetDir string, index *shared.MetadataIndex) (string, error) {
+func MatchAndPlaceVideo(videoPath, targetDir string, index *shared.MetadataIndex, hardlink bool) (string, error) {
 	source, err := os.Lstat(videoPath)
 	if err != nil {
 		return "", err
@@ -81,9 +81,15 @@ func MatchAndPlaceVideo(videoPath, targetDir string, index *shared.MetadataIndex
 	if alreadyPlaced {
 		return "", nil
 	}
-	if err := shared.SafeMoveFile(videoPath, destination); err != nil {
+	action := "Placed"
+	if hardlink {
+		if err := os.Link(videoPath, destination); err != nil {
+			return "", fmt.Errorf("create hardlink (both paths must be on the same filesystem with hardlink support): %w", err)
+		}
+		action = "Linked"
+	} else if err := shared.SafeMoveFile(videoPath, destination); err != nil {
 		return "", err
 	}
 	relative, _ := filepath.Rel(targetDir, destination)
-	return fmt.Sprintf("Placed: %s", relative), nil
+	return fmt.Sprintf("%s: %s", action, relative), nil
 }
